@@ -867,8 +867,10 @@ import {
       // Slide-up option menu (speed / quality / aspect) is modal too.
       if (pstate.pMenu) {
         if (a === 'back') return closePlayerMenu();
-        if (a === 'up') { pstate.pMenu.index = Math.max(0, pstate.pMenu.index - 1); applyPlayerMenuFocus(); return; }
-        if (a === 'down') { pstate.pMenu.index = Math.min(pstate.pMenu.items.length - 1, pstate.pMenu.index + 1); applyPlayerMenuFocus(); return; }
+        // Wrap around at the ends (Up on the first item -> last, Down on last -> first).
+        const _pn = pstate.pMenu.items.length;
+        if (a === 'up') { if (_pn) pstate.pMenu.index = (pstate.pMenu.index - 1 + _pn) % _pn; applyPlayerMenuFocus(); return; }
+        if (a === 'down') { if (_pn) pstate.pMenu.index = (pstate.pMenu.index + 1) % _pn; applyPlayerMenuFocus(); return; }
         if (a === 'select') return playerMenuActivate();
         return;
       }

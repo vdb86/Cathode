@@ -39,8 +39,10 @@ async function activateAuthButton() {
 // mode==='auth' input router branch (delegated from app.js).
 export function handleAuthInput(a) {
   if (a === 'back') { hide('auth-overlay'); state.mode = 'browse'; }
-  if (a === 'left' || a === 'up') { authFocus = Math.max(0, authFocus - 1); applyAuthFocus(); }
-  if (a === 'right' || a === 'down') { authFocus = Math.min(authButtons().length - 1, authFocus + 1); applyAuthFocus(); }
+  // Wrap around at the ends (prev on the first -> last, next on last -> first).
+  const _an = authButtons().length;
+  if (a === 'left' || a === 'up') { if (_an) authFocus = (authFocus - 1 + _an) % _an; applyAuthFocus(); }
+  if (a === 'right' || a === 'down') { if (_an) authFocus = (authFocus + 1) % _an; applyAuthFocus(); }
   if (a === 'select') activateAuthButton();
 }
 

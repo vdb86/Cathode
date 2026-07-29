@@ -152,7 +152,13 @@ const Nav = (function () {
 
     if (isRail(focusedEl)) {
       if (dir === 'up' || dir === 'down') {
-        const target = pickBest(focusedEl, dir, railEls());
+        let target = pickBest(focusedEl, dir, railEls());
+        if (!target) {
+          // Wrap around at the ends: Up on the first item -> last, Down on the
+          // last -> first. railEls() is in top-to-bottom DOM order.
+          const rails = railEls().filter((el) => visible(rect(el)));
+          if (rails.length) target = (dir === 'down') ? rails[0] : rails[rails.length - 1];
+        }
         if (target) focusEl(target);
       } else if (dir === 'right') {
         enterContent('nearest');

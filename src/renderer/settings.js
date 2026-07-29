@@ -2110,22 +2110,25 @@ const Settings = (function () {
       }
       if (picker.type === 'order') {
         if (a === 'back') return closePicker(false);
+        const _rn = picker.order.length;
         if (a === 'up') {
           if (picker.grabbed && picker.index > 0) { const o = picker.order, t = o[picker.index - 1]; o[picker.index - 1] = o[picker.index]; o[picker.index] = t; picker.index--; commitOrder(); }
-          else picker.index = Math.max(0, picker.index - 1);
+          else if (!picker.grabbed) { if (_rn) picker.index = (picker.index - 1 + _rn) % _rn; } // wrap: top -> bottom
           return renderPickerBox();
         }
         if (a === 'down') {
           if (picker.grabbed && picker.index < picker.order.length - 1) { const o = picker.order, t = o[picker.index + 1]; o[picker.index + 1] = o[picker.index]; o[picker.index] = t; picker.index++; commitOrder(); }
-          else picker.index = Math.min(picker.order.length - 1, picker.index + 1);
+          else if (!picker.grabbed) { if (_rn) picker.index = (picker.index + 1) % _rn; } // wrap: bottom -> top
           return renderPickerBox();
         }
         if (a === 'select') { picker.grabbed = !picker.grabbed; return renderPickerBox(); }
         return;
       }
       if (a === 'back') return closePicker(false);
-      if (a === 'up') { picker.index = Math.max(0, picker.index - 1); return renderPickerBox(); }
-      if (a === 'down') { picker.index = Math.min(picker.options.length - 1, picker.index + 1); return renderPickerBox(); }
+      // Wrap around at the ends (Up on the first option -> last, Down on last -> first).
+      const _on = picker.options.length;
+      if (a === 'up') { if (_on) picker.index = (picker.index - 1 + _on) % _on; return renderPickerBox(); }
+      if (a === 'down') { if (_on) picker.index = (picker.index + 1) % _on; return renderPickerBox(); }
       if (a === 'select') return picker.type === 'multi' ? multiToggle() : closePicker(true);
       return;
     }

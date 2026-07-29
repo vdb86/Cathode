@@ -159,8 +159,10 @@ async function choosePicker() {
 // "Who's watching" startup picker is modal. app.js delegates its mode==='picker'
 // router branch here.
 export function handlePickerInput(a) {
-  if (a === 'left' || a === 'up') { pickerIndex = Math.max(0, pickerIndex - 1); applyPickerFocus(); }
-  else if (a === 'right' || a === 'down') { pickerIndex = Math.min(pickerAccounts.length - 1, pickerIndex + 1); applyPickerFocus(); }
+  // Wrap around at the ends (prev on the first -> last, next on last -> first).
+  const n = pickerAccounts.length;
+  if (a === 'left' || a === 'up') { if (n) pickerIndex = (pickerIndex - 1 + n) % n; applyPickerFocus(); }
+  else if (a === 'right' || a === 'down') { if (n) pickerIndex = (pickerIndex + 1) % n; applyPickerFocus(); }
   else if (a === 'select') choosePicker();
   else if (a === 'back') window.tv.quit(); // Back exits the app from the chooser
 }

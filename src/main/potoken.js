@@ -172,6 +172,14 @@ function buildPageScript(context, visitorData, contentBinding) {
     });
 
     // 3) Exchange the snapshot for an integrity token.
+    // NOTE: the x-goog-api-key below is NOT a secret of ours. It is Google's OWN
+    // public web-client key for the BotGuard / WAA (Web Application Attestation)
+    // service, hardcoded verbatim into YouTube's web player and shared by every
+    // InnerTube project (bgutils-js, youtubei.js, yt-dlp, ...). It is not tied to
+    // any Google Cloud account, cannot be rotated or revoked by us, and grants no
+    // access to accounts or data - it only identifies the WAA endpoint. GitHub
+    // secret scanning flags it as a "Google API Key"; that alert is a false
+    // positive and can be safely dismissed.
     step = 'GenerateIT fetch';
     const itRes = await fetch('https://jnn-pa.googleapis.com/$rpc/google.internal.waa.v1.Waa/GenerateIT', {
       method: 'POST',
