@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CouchTube</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Left rail (TV-style sections) -->
+  <nav id="rail">
+    <button class="rail-item rail-account" data-section="signin">
+      <span class="account-pic"><img id="account-avatar" class="hidden" alt="" /></span>
+      <span id="signin-label">Sign in</span>
+    </button>
+    <!-- Background playback: now-playing window, controls row and queue (shown while playing / queued) -->
+    <div class="rail-item rail-np hidden" id="rail-nowplaying" data-section="nowplaying">
+      <span id="rail-np-video" class="rail-np-video"></span>
+      <span id="rail-np-label" class="rail-np-label"></span>
+    </div>
+    <div class="rail-item rail-controls hidden" id="rail-controls" data-section="npcontrols">
+      <span class="rail-ctrl-ic">▶</span>
+      <button class="npc" data-ctl="playpause"></button>
+      <button class="npc" data-ctl="stop"></button>
+      <button class="npc" data-ctl="next"></button>
+      <button class="npc" data-ctl="clear"></button>
+    </div>
+    <button class="rail-item hidden" id="rail-queue" data-section="queue"><span class="rail-ic">📋</span><span class="rail-tx" id="rail-queue-tx">Queue</span></button>
+    <button class="rail-item" data-section="search"><span class="rail-ic">🔍</span><span class="rail-tx">Search</span></button>
+    <button class="rail-item" data-section="home"><span class="rail-ic">🏠</span><span class="rail-tx">Home</span></button>
+    <button class="rail-item" data-section="subscriptions"><span class="rail-ic">📺</span><span class="rail-tx">Subscriptions</span></button>
+    <button class="rail-item" data-section="music"><span class="rail-ic">🎵</span><span class="rail-tx">Music</span></button>
+    <button class="rail-item" data-section="playlists"><span class="rail-ic">📁</span><span class="rail-tx">Playlists</span></button>
+    <button class="rail-item" data-section="watchlater"><span class="rail-ic">🔖</span><span class="rail-tx">Watch Later</span></button>
+    <button class="rail-item" data-section="history"><span class="rail-ic">🕒</span><span class="rail-tx">History</span></button>
+    <button class="rail-item hidden" data-section="downloads"><span class="rail-ic">📥<span class="rail-count hidden"></span></span><span class="rail-tx">Downloads</span></button>
+    <button class="rail-item" data-section="settings"><span class="rail-ic">⚙️</span><span class="rail-tx">Settings</span></button>
+    <button class="rail-item" data-section="quit"><span class="rail-ic">🚪</span><span class="rail-tx">Exit</span></button>
+  </nav>
+
+  <!-- On-screen clock / date (browse; top-right). Player has its own #player-clock. -->
+  <div id="clock" class="hidden"></div>
+
+  <!-- Content grid -->
+  <main id="content">
+    <h1 id="section-title">Loading…</h1>
+    <div id="grid"></div>
+    <div id="shelves" class="hidden"></div>
+  </main>
+
+  <!-- "Who's watching" account picker. VISIBLE by default (not hidden) so this
+       opaque overlay paints on the first frame and covers the rail/content until
+       boot() resolves - otherwise the underlying UI flashes before the scripts
+       load. Starts as "Connecting to YouTube..."; boot() turns it into the
+       picker (ask) or hides it (last/default). -->
+  <div id="picker-overlay" class="overlay">
+    <h2 id="picker-title">Connecting to YouTube&hellip;</h2>
+    <div id="picker-list"></div>
+    <p class="hint">Left/Right or arrows to move &middot; A / Enter to choose &middot; B / Esc to exit</p>
+  </div>
+
+  <!-- Search overlay -->
+  <div id="search-overlay" class="overlay hidden">
+    <input id="search-input" type="text" placeholder="Search YouTube…" />
+    <div id="search-suggest" class="hidden"></div>
+    <div id="osk"></div>
+    <p class="hint">D-pad/arrows to move · Up into suggestions · A/Enter to press a key or run a suggestion · B to cancel. You can also just type on a physical keyboard.</p>
+    <div id="osk-examples" class="hidden"></div>
+  </div>
+
+  <!-- Sign-in overlay (device code flow) -->
+  <div id="auth-overlay" class="overlay hidden">
+    <h2>Sign in to YouTube</h2>
+    <p>On your phone: go to <strong id="auth-url">google.com/device</strong> and enter the code</p>
+    <div id="auth-code">·····</div>
+    <div id="auth-qr" class="hidden"></div>
+    <p class="hint hidden" id="auth-qr-hint">Or scan with your phone's camera to sign in</p>
+    <div id="auth-actions">
+      <button class="auth-btn" data-auth="copy">Copy code</button>
+      <button class="auth-btn" data-auth="open">Open sign-in page on this PC</button>
+    </div>
+    <p class="hint">Up/Down = choose · A/Enter = select · B/Esc = cancel</p>
+    <p class="hint">Tip: "Open sign-in page" launches your browser here - paste the code with your remote's keyboard.</p>
+  </div>
+
+  <!-- Player overlay -->
+  <div id="player-overlay" class="overlay hidden">
+    <video id="video" autoplay></video>
+    <div id="player-clock" class="hidden"></div>
+    <div id="player-stats" class="hidden"></div>
+    <div id="screen-off" class="hidden"></div>
+    <div id="sb-prompt" class="hidden"></div>
+    <div id="player-hud" class="hidden">
+      <div id="player-title"></div>
+      <div id="player-ratings" class="hidden"></div>
+      <div id="seek-preview" class="hidden"><div class="seek-preview-thumb"></div><div class="seek-preview-label"></div></div>
+      <div id="player-transport">
+        <span id="player-cur">0:00</span>
+        <div id="seek-track">
+          <div id="seek-buffered"></div>
+          <div id="seek-fill"></div>
+          <div id="seek-target" class="hidden"></div>
+          <div id="seek-badge" class="hidden"></div>
+          <div id="seek-knob"></div>
+        </div>
+        <span id="player-dur">0:00</span>
+      </div>
+      <div id="player-buttons">
+        <button class="pbtn" data-act="prev"></button>
+        <button class="pbtn" data-act="rw"></button>
+        <button class="pbtn" data-act="playpause"></button>
+        <button class="pbtn" data-act="stop"></button>
+        <button class="pbtn" data-act="ff"></button>
+        <button class="pbtn" data-act="next"></button>
+        <button class="pbtn" data-act="like"></button>
+        <button class="pbtn" data-act="dislike"></button>
+        <button class="pbtn" data-act="subscribe"></button>
+        <button class="pbtn" data-act="cc"></button>
+        <button class="pbtn" data-act="audio"></button>
+        <button class="pbtn" data-act="speed"></button>
+        <button class="pbtn" data-act="quality"></button>
+        <button class="pbtn" data-act="save"></button>
+        <button class="pbtn" data-act="sb"></button>
+        <button class="pbtn" data-act="repeat"></button>
+        <button class="pbtn" data-act="aspect"></button>
+        <button class="pbtn" data-act="stats"></button>
+        <button class="pbtn" data-act="screenoff"></button>
+        <button class="pbtn" data-act="openchannel"></button>
+        <button class="pbtn" data-act="livechat"></button>
+        <button class="pbtn" data-act="comments"></button>
+        <button class="pbtn" data-act="download"></button>
+        <button class="pbtn" data-act="cog"></button>
+      </div>
+      <div id="player-tip" class="hidden"></div>
+    </div>
+    <div id="player-suggest" class="hidden"></div>
+    <div id="player-chat" class="hidden"></div>
+    <div id="player-comments" class="hidden"></div>
+    <div id="player-menu" class="hidden"></div>
+  </div>
+
+  <!-- Backup progress overlay -->
+  <div id="backup-progress" class="overlay hidden">
+    <h2>Backing up…</h2>
+    <div id="backup-bar"><div id="backup-bar-fill"></div></div>
+    <div id="backup-progress-label">Preparing…</div>
+    <p class="hint">Please wait - do not close CouchTube.</p>
+  </div>
+
+  <div id="dl-progress" class="overlay hidden">
+    <h2>Setting up downloads…</h2>
+    <div id="dl-bar"><div id="dl-bar-fill"></div></div>
+    <div id="dl-progress-label">Preparing…</div>
+    <p class="hint">Downloading yt-dlp and ffmpeg - do not close CouchTube.</p>
+  </div>
+
+  <!-- Fatal error overlay -->
+  <div id="error-overlay" class="overlay hidden">
+    <h2 id="error-title">Something broke</h2>
+    <p id="error-message"></p>
+    <p class="hint">Details were saved to: <span id="error-logpath"></span></p>
+    <p class="hint">Press A / Enter to exit</p>
+  </div>
+
+  <!-- Video context menu -->
+  <div id="menu-overlay" class="overlay hidden">
+    <div id="menu-title"></div>
+    <div id="menu-count"></div>
+    <div id="menu-list"></div>
+    <p class="hint">Up/Down or arrows to move · A / Enter to select · B / Esc to close</p>
+  </div>
+
+  <!-- Settings dialog (opened from a Settings category card) -->
+  <div id="settings-overlay" class="overlay hidden">
+    <div id="settings-body">
+      <div id="settings-main">
+        <div id="settings-dialog-title"><span id="settings-dialog-label"></span><span id="settings-dialog-count"></span></div>
+        <div id="settings-list"></div>
+      </div>
+      <div id="settings-tip" aria-hidden="true"></div>
+    </div>
+    <p class="hint">Up/Down or arrows move · A / Enter change · B / Esc back</p>
+    <div id="settings-picker" class="hidden"></div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+
+  <!-- Screen dimming: translucent black layer that fades in after inactivity
+       (General > Screen dimming). Opacity set from dimAmount in app.js. -->
+  <div id="dim-overlay"></div>
+
+  <script src="../../node_modules/shaka-player/dist/shaka-player.compiled.js"></script>
+  <!-- SABR streaming: vendored googlevideo (build via: npm run build:sabr) + adapter glue -->
+  <script src="debug.js"></script>
+  <script src="vendor/googlevideo.js"></script>
+  <script src="sabr.js"></script>
+  <script src="gamepad.js"></script>
+  <script src="nav.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script src="settings.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1549 @@
+/* 10-foot UI: dark, big targets, loud focus ring. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Theme variables. Colour values here are DEFAULTS (Dark scheme); Settings >
+   Interface > Colour scheme + Accent colour override them at runtime via
+   Settings.applyAll() (root.style.setProperty). Translucent focus fills are
+   derived from --focus with color-mix(), so changing the accent recolours
+   every focus highlight automatically -- do not hardcode the old blue again. */
+:root {
+  --bg: #0f0f0f;
+  --card: #1f1f1f;
+  --text: #f1f1f1;
+  --text-dim: #aaaaaa;
+  --accent: #ffffff;
+  --focus: #3ea6ff;
+  --overlay-bg: rgba(0, 0, 0, 0.92);  /* full-screen overlay backdrop */
+  --popup-bg: rgba(20, 20, 20, 0.98); /* settings picker popup */
+  --chip-bg: rgba(0, 0, 0, 0.45);     /* browse clock pill */
+  --rail-grad: rgba(0, 0, 0, 0.85);   /* left-rail fade (to transparent) */
+  --rail-w: 220px;   /* side-rail width; body.rail-mini shrinks it to icons */
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", Roboto, sans-serif;
+  height: 100%;
+  overflow: hidden;
+  cursor: none; /* controller-first: hide the mouse cursor */
+}
+
+/* ---------- Left rail ---------- */
+
+#rail {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--rail-w);
+  padding: 40px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(90deg, var(--rail-grad), transparent);
+  z-index: 10;
+  overflow-x: hidden;
+  overflow-y: auto;        /* scroll when the now-playing window / queue push items past the screen */
+  scrollbar-width: none;
+  transition: width 150ms ease;
+}
+#rail::-webkit-scrollbar { display: none; }
+
+/* Icon + label split so the rail can collapse to icons only. */
+.rail-ic { flex: 0 0 auto; width: 26px; text-align: center; }
+.rail-tx { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Minimized side rail (Interface > Minimize side rail): icons only. Only the
+   FOCUSED item expands, and only HORIZONTALLY -- it grows into a flyout that
+   overlays content to the right, while the rail itself stays --rail-w wide so
+   nothing above/below moves. overflow:visible keeps the flyout from clipping.
+   The now-playing VIDEO window is excluded from expanding (widening it would
+   grow its 16:9 height and push items down). */
+body.rail-mini { --rail-w: 68px; }
+body.rail-mini #rail { overflow: visible; }
+body.rail-mini .rail-tx,
+body.rail-mini .rail-np-label,
+body.rail-mini #signin-label { display: none; }
+body.rail-mini .rail-item { justify-content: center; gap: 0; padding-left: 0; padding-right: 0; }
+body.rail-mini .rail-controls { gap: 3px; }
+body.rail-mini .npc svg { width: 16px; height: 16px; }
+body.rail-mini .rail-item.focused:not(.rail-np) {
+  width: 220px;
+  align-self: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+  padding-left: 16px;
+  padding-right: 16px;
+  background: var(--card);
+  z-index: 20;
+}
+body.rail-mini .rail-item.focused:not(.rail-np) .rail-tx { display: block; }
+body.rail-mini .rail-account.focused #signin-label { display: block; min-height: 0; white-space: nowrap; }
+body.rail-mini .rail-controls.focused .npc svg { width: 22px; height: 22px; }
+/* Pin the collapsed controls row to a fixed height in BOTH states so focusing it
+   (which swaps the single now-playing icon for the four taller buttons) expands
+   ONLY horizontally into the flyout -- the row's vertical slot never changes, so
+   the queue/rail items below it don't shift down. */
+body.rail-mini .rail-controls {
+  height: 40px;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  align-items: center;
+}
+/* Collapsed controls row: show ONE now-playing icon; the four buttons appear
+   only when the row is focused (and it expands into the flyout). */
+.rail-ctrl-ic { display: none; }
+body.rail-mini .rail-controls:not(.focused) .npc { display: none; }
+body.rail-mini .rail-controls:not(.focused) .rail-ctrl-ic { display: block; width: 100%; text-align: center; font-size: 20px; color: var(--focus); }
+
+.rail-item {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 20px;
+  text-align: left;
+  padding: 14px 16px;
+  flex: 0 0 auto;          /* keep natural height so the rail scrolls instead of squishing items */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: width 120ms ease, background-color 120ms ease;
+}
+
+.rail-item.focused {
+  border-color: var(--focus);
+  color: var(--text);
+  background: color-mix(in srgb, var(--focus) 12%, transparent);
+}
+
+/* Downloads rail item count badge: a small bubble on the icon's corner (queue
+   size, any status) so it never competes with / truncates the "Downloads" label. */
+.rail-ic { position: relative; }
+.rail-count {
+  position: absolute;
+  top: -7px;
+  left: 100%;
+  margin-left: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--focus);
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+/* In the icons-only mini rail, keep the bubble pinned to the icon corner. */
+body.rail-mini .rail-count { left: auto; right: -8px; margin-left: 0; }
+
+/* Account avatar: the FIRST (top-left) rail item is a circular profile photo
+   (no emoji). When signed out / no photo, the img is hidden and the person
+   silhouette background shows instead. */
+.rail-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rail-account .account-pic {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #333 center/64% no-repeat
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23bbbbbb'><path d='M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.4 0-8 2.2-8 5.5V22h16v-2.5c0-3.3-3.6-5.5-8-5.5z'/></svg>");
+}
+.rail-account .account-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- Content grid ---------- */
+
+#content {
+  /* zoom scales the whole box incl. this margin; divide so it still clears the
+     rail at any UI scale. --rail-w shrinks when the rail is minimized. */
+  margin-left: calc(var(--rail-w) / var(--ui-zoom, 1));
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: none;   /* controller UI: nav.js scrolls into view; hidden bar reclaims the right gutter */
+  padding: 20px;           /* gutters match the 20px grid gap */
+  zoom: var(--ui-zoom, 1); /* Interface > UI scale */
+  /* scroll-behavior intentionally NOT set: nav.js picks smooth vs instant
+     per movement; a CSS 'smooth' here overrides JS behavior:'auto' and made
+     held-direction scrolling lag behind the selector. */
+}
+#content::-webkit-scrollbar { display: none; }
+
+#section-title {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+#grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+/* Interface > Playlists layout = List: one per row, thumbnail left of the text.
+   (!important overrides the inline grid-template-columns set for UI grid scale.) */
+body.pl-list #grid { grid-template-columns: 1fr !important; gap: 12px; }
+body.pl-list #grid .card { display: flex; align-items: center; }
+body.pl-list #grid .card .thumb { flex: 0 0 260px; width: 260px; }
+body.pl-list #grid .card .meta { flex: 1; }
+
+.card {
+  background: var(--card);
+  border: 3px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 120ms ease;
+}
+
+body.no-round .card { border-radius: 0; } /* Interface > rounded card corners */
+
+.card.focused {
+  border-color: var(--focus);
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+.card .thumb {
+  position: relative;
+  line-height: 0;
+}
+
+.card .thumb img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+/* Thumbnail overlays: duration bottom-right, live badge top-right. */
+.card .badge-duration,
+.card .badge-live {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+}
+
+.card .badge-live {
+  background: #cc0000;
+  letter-spacing: 0.5px;
+}
+
+/* Watched-progress bar (YouTube resume data): red fill along the thumbnail
+   bottom. Sits above the image, below the duration badge. */
+.card .card-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.card .card-progress-fill {
+  height: 100%;
+  background: #cc0000;
+}
+/* Like/dislike counts on a card (Interface > Like / dislike counts on cards). */
+.card .card-ratings {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* "Watched" mark for essentially-finished videos: top-left of the thumbnail. */
+.card .badge-watched {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+}
+
+.card .meta {
+  padding: 10px 12px 14px;
+}
+
+.card .title {
+  font-size: 16px;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--card-title-lines, 2); /* Interface > card title lines */
+}
+
+/* Interface > Card text autoscroll: titles go single-line; the focused card's
+   title is scrolled by app.js (CardScroll) when it overflows its box. */
+body.card-autoscroll .card .title {
+  display: block;
+  -webkit-line-clamp: unset;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.card-autoscroll .card.focused .title { text-overflow: clip; }
+
+.card .sub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.card .card-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* ---------- Overlays ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-size: 22px;
+}
+
+.hidden { display: none !important; }
+
+.hint { color: var(--text-dim); font-size: 15px; }
+
+#search-input {
+  width: 60%;
+  font-size: 30px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  border: 3px solid var(--focus);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+}
+
+/* On-screen keyboard (controller-typable search) */
+#osk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Per-field examples / variable reference shown below the keyboard (text-entry
+   mode), so the input stays empty and the examples are clearly readable. Left-
+   aligned with pre-wrap so multi-line variable lists render one per line. */
+#osk-examples {
+  margin: 14px auto 0;
+  max-width: 760px;
+  text-align: left;
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  word-break: break-word;
+}
+#osk-examples.hidden { display: none; }
+
+.osk-row {
+  display: flex;
+  gap: 10px;
+}
+
+.osk-key {
+  min-width: 64px;
+  height: 64px;
+  padding: 0 16px;
+  font-size: 24px;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background: var(--card);
+  color: var(--text);
+}
+
+.osk-key.osk-w2 { min-width: 138px; }
+.osk-key.osk-w3 { min-width: 212px; }
+
+.osk-key.focused {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+/* Search suggestions / history: one horizontal, scrollable line above the OSK.
+   History shows when the field is empty; live suggestions replace it while
+   typing. Up from the OSK top row enters this strip; Left/Right scroll it. */
+#search-suggest {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  width: 60%;
+  min-height: 58px;        /* reserve the row so the keyboard doesn't shift when chips appear */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  padding: 4px;
+}
+#search-suggest::-webkit-scrollbar { display: none; }
+
+.suggest-chip {
+  flex: 0 0 auto;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 18px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background: var(--card);
+  color: var(--text);
+}
+.suggest-chip.hist::before { content: "\1F551  "; color: var(--text-dim); } /* clock glyph on history chips */
+.suggest-chip.focused {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+#auth-code {
+  font-size: 64px;
+  letter-spacing: 12px;
+  font-weight: 700;
+  color: var(--focus);
+}
+
+#auth-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.auth-btn {
+  background: var(--card);
+  border: 3px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 20px;
+  padding: 14px 22px;
+}
+
+.auth-btn.focused {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 12%, transparent);
+}
+
+/* Sign-in QR (scan with a phone camera) */
+#auth-qr {
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  line-height: 0;
+}
+#auth-qr canvas { display: block; }
+
+/* Backup progress overlay. Higher z-index than the Settings overlay/picker
+   (100/110) because it is triggered from inside Settings and must sit ON TOP --
+   it precedes #settings-overlay in the DOM, so equal z-index would let Settings
+   paint over the bar. */
+#backup-progress { z-index: 190; }
+#backup-bar {
+  width: 60vw;
+  max-width: 700px;
+  height: 22px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+#backup-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--focus);
+  transition: width 0.2s ease;
+}
+#backup-progress-label { font-size: 20px; color: var(--text-dim); }
+
+/* Binary-install progress (Downloads) reuses the backup bar's look. Same high
+   z-index as #backup-progress so it sits ABOVE the open Settings overlay
+   (it's triggered from the Downloads dialog). */
+#dl-progress { z-index: 190; }
+#dl-bar {
+  width: 60vw;
+  max-width: 700px;
+  height: 22px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+#dl-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--focus);
+  transition: width 0.2s ease;
+}
+#dl-progress-label { font-size: 20px; color: var(--text-dim); }
+
+/* Settings category grid: fit ALL cards on screen without scrolling. #content
+   becomes a flex column so #grid fills the area under the title; equal auto
+   rows shrink the cards to fit, and icon/label scale with the viewport height.
+   Scoped to body.settings-cats (added by Settings.openScreen, removed on the
+   next section load), so normal feed grids are unaffected. */
+body.settings-cats #content { overflow: hidden; display: flex; flex-direction: column; }
+body.settings-cats #grid {
+  grid-template-columns: repeat(var(--set-cols, 5), 1fr) !important;
+  grid-auto-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+body.settings-cats .card.settings-card {
+  min-height: 0;
+  height: 100%;
+  padding: clamp(6px, 1.6vh, 24px);
+  gap: clamp(4px, 1vh, 14px);
+}
+body.settings-cats .card.settings-card .settings-icon { font-size: clamp(22px, 4.6vh, 48px); }
+body.settings-cats .card.settings-card .settings-label { font-size: clamp(12px, 2vh, 20px); }
+
+/* Downloads screen: queue items rendered as cards with a progress bar. */
+.dl-card {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+  justify-content: center;
+}
+.dl-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.dl-card-status { font-size: 15px; color: var(--text-dim); }
+.dl-bar2 { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.dl-bar2-fill { height: 100%; width: 0%; background: var(--focus); transition: width 0.2s ease; }
+.dl-card.error .dl-bar2-fill { background: #e24b4a; }
+.dl-clear { align-items: center; justify-content: center; }
+.dl-empty { color: var(--text-dim); font-size: 20px; padding: 20px; grid-column: 1 / -1; }
+
+/* ---------- Player ---------- */
+
+/* The player HUD always sits over (usually dark) video, so it keeps a dark
+   surface + light text REGARDLESS of the app colour scheme. Re-declaring the
+   theme vars locally means a Light scheme does not turn the controls / menus
+   into dark text on dark boxes. The accent (--focus) is intentionally NOT reset
+   here, so it still tracks the chosen accent colour inside the player too. */
+#player-overlay {
+  background: #000;
+  --bg: #000000;
+  --card: #1f1f1f;
+  --text: #f1f1f1;
+  --text-dim: #aaaaaa;
+  --accent: #ffffff;
+}
+
+#video { width: 100vw; height: 100vh; }
+
+#player-hud {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 30px 50px;
+  background: linear-gradient(transparent, rgba(0,0,0,.85));
+}
+
+#player-title { font-size: 24px; font-weight: 600; margin-bottom: 16px; }
+/* Like/dislike counts under the player title (Player > Show like / dislike counts). */
+#player-ratings { display: flex; gap: 22px; font-size: 18px; color: #fff; margin-top: -8px; margin-bottom: 16px; }
+#player-ratings.hidden { display: none; }
+
+#player-transport {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#player-cur, #player-dur {
+  font-size: 16px;
+  color: var(--text-dim);
+  min-width: 68px;
+}
+#player-dur { text-align: right; }
+
+#seek-track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid transparent; /* grows on focus without shifting layout */
+}
+
+#seek-buffered, #seek-fill {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  border-radius: 3px;
+}
+#seek-buffered { background: rgba(255, 255, 255, 0.4); }
+#seek-fill { background: var(--focus); }
+
+/* SponsorBlock segment markers on the seek track (colour set per category). */
+.sb-seg {
+  position: absolute;
+  top: 0; bottom: 0;
+  z-index: 1;
+  background: #00d400;
+  opacity: 0.9;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Chapter boundary ticks on the seek track. */
+.chap-seg {
+  position: absolute;
+  top: -3px; bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+}
+
+/* Seek-preview thumbnail (storyboard sprite) + chapter label, shown while the
+   seek track is focused. Positioned by JS via left:%. */
+#seek-preview {
+  position: absolute;
+  bottom: 130px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 125;
+  pointer-events: none;
+}
+.seek-preview-thumb {
+  border: 2px solid var(--focus);
+  border-radius: 6px;
+  background-repeat: no-repeat;
+  background-color: #000;
+}
+.seek-preview-label {
+  font-size: 14px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 3px 10px;
+  border-radius: 6px;
+  max-width: 280px;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#seek-knob {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 16px; height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: var(--focus);
+  transform: translateY(-50%);
+}
+
+#seek-track.focused {
+  height: 10px;
+  border-color: var(--accent);
+}
+
+#player-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 14px;
+  margin-top: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px;
+}
+
+#player-buttons::-webkit-scrollbar { display: none; }
+
+.pbtn {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 14px;
+  min-width: 60px;
+}
+
+.pbtn .picon { line-height: 0; }
+.pbtn .picon svg { width: 26px; height: 26px; fill: currentColor; display: block; }
+.pbtn .plabel { font-size: 12px; color: var(--text-dim); }
+
+.pbtn.focused {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+.pbtn.on { color: var(--focus); }
+.pbtn.on .plabel { color: var(--focus); }
+.pbtn.dim { opacity: 0.4; } /* Prev/Next when the queue end is reached */
+
+/* Focused-button name tooltip (position:fixed, anchored above the button; it is
+   a child of #player-hud so it hides automatically when the HUD auto-hides). */
+#player-tip {
+  position: fixed;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 20, 0.96);
+  border: 2px solid var(--focus);
+  color: var(--text);
+  font-size: 16px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  white-space: nowrap;
+  z-index: 140;
+  pointer-events: none;
+}
+
+/* Slide-up option menu (speed / quality / aspect) */
+#player-menu {
+  position: absolute;
+  left: 50%;
+  bottom: 150px;
+  transform: translateX(-50%);
+  min-width: 200px;
+  max-height: 62vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: rgba(20, 20, 20, 0.97);
+  border: 2px solid var(--focus);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 130;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#player-menu::-webkit-scrollbar { display: none; }
+
+/* Position counter ("i / N"), sticky so it stays visible while the list scrolls.
+   Green (accent) + tabular figures, matching the context menu's #menu-count. */
+.pmenu-count {
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  text-align: center;
+  color: var(--focus);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  padding: 2px 0 6px;
+  background: rgba(20, 20, 20, 0.97);
+  z-index: 1;
+}
+
+.pmenu-item {
+  padding: 12px 22px;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  font-size: 20px;
+  text-align: center;
+  color: var(--text);
+  scroll-margin-top: 32px;    /* keep the focused row clear of the sticky counter */
+  scroll-margin-bottom: 8px;
+}
+
+.pmenu-item.focused {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 20%, transparent);
+}
+/* The option currently in effect (e.g. the playing audio track): accent text +
+   a trailing check, so it stays identifiable even when another row is focused. */
+.pmenu-item.active {
+  color: var(--focus);
+  font-weight: 600;
+}
+.pmenu-item.active::after {
+  content: ' \2713';   /* check mark */
+}
+/* Cog-menu entry whose underlying button is currently On (mirrors .pbtn.on). */
+.pmenu-item.on { color: var(--focus); }
+
+/* In-player suggestions drawer (Down while the HUD is hidden): shrink the
+   video upward and show the related list as a focusable row below it. */
+#player-overlay.suggesting #video {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100vw; height: 60vh;
+  object-fit: contain;
+  background: #000;
+}
+#player-suggest {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 40vh;
+  box-sizing: border-box;
+  padding: 20px 40px;
+  background: rgba(15, 15, 15, 0.96);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  z-index: 125;
+}
+#player-suggest::-webkit-scrollbar { display: none; }
+#player-suggest .card { flex: 0 0 260px; }
+#player-suggest .suggest-msg {
+  align-self: center;
+  color: #bbb;
+  font-size: 20px;
+  padding: 0 8px;
+}
+
+/* Live chat (read-only): a right/left-docked ticker; the video shrinks to the
+   other side and keeps playing. Panel stays dark regardless of theme (like the
+   rest of the player HUD) so it reads over video. */
+#player-overlay.chatting #video {
+  position: absolute;
+  top: 0;
+  height: 100vh;
+  object-fit: contain;
+  background: #000;
+}
+#player-overlay.chatting[data-chat-side="right"] #video { left: 0; }
+#player-overlay.chatting[data-chat-side="left"]  #video { right: 0; }
+#player-overlay.chatting[data-chat-width="narrow"] #video { width: calc(100vw - 300px); }
+#player-overlay.chatting[data-chat-width="med"]    #video { width: calc(100vw - 380px); }
+#player-overlay.chatting[data-chat-width="wide"]   #video { width: calc(100vw - 460px); }
+#player-chat {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 380px;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  background: rgba(15, 15, 15, 0.96);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  font-size: 16px;
+  z-index: 126;
+  transition: opacity 0.3s ease;
+}
+#player-chat::-webkit-scrollbar { display: none; }
+#player-chat[data-side="right"] { right: 0; }
+#player-chat[data-side="left"]  { left: 0; }
+#player-chat[data-width="narrow"] { width: 300px; }
+#player-chat[data-width="med"]    { width: 380px; }
+#player-chat[data-width="wide"]   { width: 460px; }
+#player-chat[data-size="sm"]  { font-size: 14px; }
+#player-chat[data-size="med"] { font-size: 16px; }
+#player-chat[data-size="lg"]  { font-size: 20px; }
+#player-chat.chat-idle { opacity: 0.15; }
+#player-chat .chat-note { color: #aaa; font-size: 0.9em; padding: 6px 2px; }
+.chat-msg { display: flex; gap: 8px; align-items: flex-start; line-height: 1.3; }
+.chat-avatar { width: 24px; height: 24px; border-radius: 50%; flex: 0 0 auto; margin-top: 2px; }
+.chat-body { min-width: 0; overflow-wrap: anywhere; }
+.chat-author { font-weight: 600; color: #9db4d0; margin-right: 6px; }
+.chat-author.is-mod { color: #5e84f1; }
+.chat-author.is-member { color: #2ba640; }
+.chat-verified { color: #aaa; font-size: 0.8em; margin-right: 6px; }
+.chat-text { color: #eee; }
+.chat-emoji { height: 1.2em; vertical-align: -0.2em; margin: 0 1px; }
+.chat-paid { border-radius: 8px; padding: 6px 8px; background: #0a5d91; color: #fff; }
+.chat-paid .chat-author { color: inherit; }
+.chat-paid .chat-amount { font-weight: 700; margin-right: 6px; }
+.chat-membership { background: rgba(43, 166, 64, 0.18); border-radius: 8px; padding: 6px 8px; }
+.chat-membership .chat-memhdr { color: #2ba640; font-weight: 600; font-size: 0.9em; margin-bottom: 2px; }
+.chat-sticker .chat-sticker-img { display: block; max-width: 72px; max-height: 72px; margin-top: 4px; }
+/* Pinned banner / poll: sticky at the top of the panel, above the ticker. */
+.chat-banner {
+  position: sticky;
+  top: 0;
+  background: #1f2a37;
+  border-left: 3px solid #3ea6ff;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  z-index: 1;
+}
+.chat-banner-hdr { color: #9db4d0; font-size: 0.8em; font-weight: 600; margin-bottom: 3px; }
+.chat-banner-msg .chat-author { margin-right: 6px; }
+.chat-banner-q { font-weight: 700; color: #fff; margin-bottom: 6px; }
+.chat-poll-opt {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 3px 0;
+  color: #eee;
+}
+
+/* Comments (read-only): a focusable docked list; mirrors the chat panel dock. */
+#player-overlay.commenting #video {
+  position: absolute;
+  top: 0;
+  height: 100vh;
+  object-fit: contain;
+  background: #000;
+}
+#player-overlay.commenting[data-comments-side="right"] #video { left: 0; }
+#player-overlay.commenting[data-comments-side="left"]  #video { right: 0; }
+#player-overlay.commenting[data-comments-width="narrow"] #video { width: calc(100vw - 340px); }
+#player-overlay.commenting[data-comments-width="med"]    #video { width: calc(100vw - 420px); }
+#player-overlay.commenting[data-comments-width="wide"]   #video { width: calc(100vw - 520px); }
+#player-comments {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 420px;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  background: rgba(15, 15, 15, 0.97);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  font-size: 16px;
+  z-index: 126;
+}
+#player-comments::-webkit-scrollbar { display: none; }
+#player-comments[data-side="right"] { right: 0; }
+#player-comments[data-side="left"]  { left: 0; }
+#player-comments[data-width="narrow"] { width: 340px; }
+#player-comments[data-width="med"]    { width: 420px; }
+#player-comments[data-width="wide"]   { width: 520px; }
+#player-comments[data-size="sm"]  { font-size: 14px; }
+#player-comments[data-size="med"] { font-size: 16px; }
+#player-comments[data-size="lg"]  { font-size: 20px; }
+.comments-hdr { color: #9db4d0; font-weight: 600; padding: 2px 2px 10px; position: sticky; top: 0; background: rgba(15, 15, 15, 0.97); z-index: 1; }
+.comment-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 6px; border-radius: 8px; }
+.comment-row.focused { background: rgba(62, 166, 255, 0.3); }
+.comment-reply { margin-left: 28px; }
+.comment-avatar { width: 32px; height: 32px; border-radius: 50%; flex: 0 0 auto; }
+.comment-body { min-width: 0; overflow-wrap: anywhere; }
+.comment-meta { font-size: 0.85em; color: #9db4d0; margin-bottom: 2px; }
+.comment-author { font-weight: 600; margin-right: 6px; color: #ddd; }
+.comment-author.is-owner { color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 4px; padding: 0 5px; }
+.comment-pin { color: #8a94a6; margin-right: 6px; }
+.comment-time { color: #8a94a6; }
+.comment-text { color: #eee; line-height: 1.35; }
+.comment-foot { font-size: 0.85em; color: #8a94a6; margin-top: 4px; }
+
+/* Reorder popup: the grabbed row currently being moved. */
+.settings-pick.grabbed {
+  background: color-mix(in srgb, var(--focus) 28%, transparent);
+  border-color: var(--accent);
+}
+
+/* Video stats overlay ("stats for nerds") */
+#player-stats {
+  position: absolute;
+  top: 40px;
+  left: 50px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 10px;
+  padding: 16px 20px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  z-index: 120;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Screen-off blackout (audio keeps playing) */
+#screen-off {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 18px;
+}
+
+/* General > Screen dimming: full-screen black layer faded in after inactivity
+   (opacity set from dimAmount in app.js). Above everything; never eats input. */
+#dim-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transition: opacity 1.5s ease;
+}
+
+/* ---------- Video context menu ---------- */
+
+#menu-title {
+  font-size: 20px;
+  color: var(--text-dim);
+  max-width: 60%;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+#menu-count {
+  color: var(--focus);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  text-align: center;
+  margin-bottom: 8px;
+  min-height: 18px;
+}
+
+#menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 440px;
+  max-height: 60vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+#menu-list::-webkit-scrollbar { display: none; }
+
+.menu-item {
+  background: var(--card);
+  border: 3px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 22px;
+  padding: 14px 22px;
+  text-align: left;
+}
+
+.menu-item.focused {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 20%, transparent);
+}
+
+/* ---------- "Who's watching" account picker ---------- */
+
+#picker-title { font-size: 34px; font-weight: 600; margin-bottom: 8px; }
+#picker-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 28px;
+  justify-content: center;
+  max-width: 80vw;
+}
+.picker-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 170px;
+  padding: 18px;
+  border: 3px solid transparent;
+  border-radius: 14px;
+}
+.picker-tile.focused { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 12%, transparent); }
+.picker-ava {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #333 center/62% no-repeat
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23bbbbbb'><path d='M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.4 0-8 2.2-8 5.5V22h16v-2.5c0-3.3-3.6-5.5-8-5.5z'/></svg>");
+}
+.picker-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.picker-tile.picker-add .picker-ava {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+  font-size: 54px;
+  color: var(--text-dim);
+}
+.picker-name {
+  font-size: 20px;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker-tile.is-default .picker-name::after { content: " \2605"; color: var(--focus); }
+/* Restored (creds-less) account after a cross-machine backup restore: subtle
+   amber ring + a small "sign in again" chip so it reads as actionable, not
+   broken. Selecting it re-runs sign-in rather than entering. */
+.picker-tile.needs-relogin .picker-ava { box-shadow: 0 0 0 3px #ffb300; }
+.relogin-badge {
+  font-size: 13px;
+  color: #ffb300;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ---------- On-screen clock / date ---------- */
+
+/* Browse clock: top-right of the viewport, above content but BELOW overlays
+   (z-index 100), so any overlay (player, search, settings, picker) naturally
+   covers it. The player has its own #player-clock inside the player overlay. */
+#clock {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 15;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--chip-bg);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Player clock: top-right inside the player overlay, shown with the HUD. */
+#player-clock {
+  position: absolute;
+  top: 30px;
+  right: 50px;
+  z-index: 121;
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* ---------- Toast ---------- */
+
+#toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 2px solid var(--focus);
+  border-radius: 10px;
+  padding: 14px 22px;
+  font-size: 18px;
+  z-index: 200;
+}
+
+/* ---------- Shelves (categories view) ---------- */
+
+#shelves {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+.shelf-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+/* Horizontal card strip. Cards are fixed-width here (the grid gives them
+   1fr, which collapses inside a flex row). Overflow is hidden and the
+   selector is scrolled into view by nav.js, so no visible scrollbar. */
+.shelf-strip {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  padding: 14px 14px;   /* room for the focused card's scale(1.05) ring (the strip clips overflow) */
+}
+
+.shelf-strip::-webkit-scrollbar { display: none; }
+
+.shelf-strip .card {
+  flex: 0 0 320px;
+  width: 320px;
+}
+
+/* ---------- Channel list (Subscriptions) ---------- */
+
+.card.channel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 150px;
+  padding: 18px;
+  text-align: center;
+}
+
+.card.channel-card .channel-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #000;
+}
+
+.card.channel-card .channel-name {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* ---------- Settings ---------- */
+
+/* Category cards (the grid you land on from the rail's Settings item). */
+.card.settings-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 150px;
+  padding: 24px;
+  text-align: center;
+}
+
+.card.settings-card .settings-icon { font-size: 48px; line-height: 1; }
+.card.settings-card .settings-label { font-size: 20px; font-weight: 600; }
+
+/* Settings dialog overlay: top-align (not centre) with padding so a tall card
+   (e.g. Playback commands with every option on) never pushes the title off the
+   top or the bottom hint off the bottom. The list scrolls within its cap. */
+#settings-overlay {
+  justify-content: flex-start;
+  padding: 3vh 20px;
+  box-sizing: border-box;
+}
+/* Dialog (opened from a category card): the option list on the left, and a
+   help panel on the right that describes whichever row is focused. */
+#settings-body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  position: relative;
+}
+#settings-main {
+  display: flex;
+  flex-direction: column;
+}
+/* Right-side tooltip: a small box (sized to its text) that describes the
+   currently focused option and sits vertically beside it. Its top is set in JS
+   (positionTip) to track the focused row; height follows its content. */
+#settings-tip {
+  flex: 0 0 320px;
+  width: 320px;
+  align-self: flex-start;
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--card);
+  border: 3px solid transparent;
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-sizing: border-box;
+  transition: transform 0.1s ease-out;
+}
+#settings-tip::-webkit-scrollbar { display: none; }
+#settings-tip .settings-tip-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+#settings-tip .settings-tip-body {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+#settings-dialog-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  width: 620px;   /* match #settings-list so the counter sits at the right edge */
+  max-width: 60vw;
+}
+/* Live "i / N" position counter in the dialog title (how many options here). */
+#settings-dialog-count {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--focus);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 620px;
+  max-width: 60vw;
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+#settings-list::-webkit-scrollbar { display: none; }
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: var(--card);
+  border: 3px solid transparent;
+  border-radius: 10px;
+  padding: 14px 22px;
+}
+
+.settings-row.focused { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 20%, transparent); }
+.settings-row-label { font-size: 20px; }
+.settings-row-value { font-size: 18px; color: var(--text-dim); min-width: 90px; text-align: right; }
+.settings-row-value.on { color: var(--focus); }
+
+/* Read-only hint / example line inside a dialog (kind:'note'). Plain text, no
+   row box, not focusable. */
+.settings-note {
+  padding: 2px 8px 6px;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Option picker popup (enums with >2 options). The box no longer scrolls
+   itself: a fixed header (label + position counter) and up/down chevron cues
+   frame an inner scrollable list, so long lists (languages, countries) clearly
+   signal there is more above/below. */
+#settings-picker {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 340px;
+  max-width: 46vw;
+  max-height: 78vh;
+  overflow: hidden;
+  background: var(--popup-bg);
+  border: 2px solid var(--focus);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 110;
+}
+.settings-pick-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 18px;
+  padding: 2px 12px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+.settings-pick-title { font-size: 18px; font-weight: 600; color: var(--text); }
+.settings-pick-count {
+  font-size: 15px; color: var(--focus);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Chevron cues; '.off' keeps the row's height (no layout shift) at the ends. */
+.settings-pick-hint {
+  text-align: center; color: var(--text-dim);
+  font-size: 13px; line-height: 1; height: 15px;
+}
+.settings-pick-hint.off { visibility: hidden; }
+.settings-pick-list {
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+}
+.settings-pick-list::-webkit-scrollbar { display: none; }
+.settings-pick {
+  padding: 12px 22px;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  font-size: 20px;
+  color: var(--text);
+}
+.settings-pick.focused { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 20%, transparent); }
+
+/* Numeric keypad popup (Skip delay) */
+#settings-picker.kp { min-width: 300px; }
+.kp-display {
+  font-size: 24px; font-weight: 500; color: var(--text);
+  text-align: center; padding: 6px 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15); margin-bottom: 6px;
+}
+.kp-row { display: flex; gap: 6px; justify-content: center; }
+.kp-key {
+  flex: 1; text-align: center; padding: 12px 0; border-radius: 8px;
+  border: 3px solid transparent; font-size: 20px; color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+.kp-key.kp-wide { font-size: 18px; }
+.kp-key.focused { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 20%, transparent); }
+
+/* Bind-capture popup (Controls > rebind): waits for a raw button/key press. */
+#settings-picker.bind { min-width: 380px; }
+.bind-cap {
+  text-align: center;
+  padding: 18px 12px 8px;
+}
+.bind-cap-action { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+.bind-cap-prompt { font-size: 18px; color: var(--focus); }
+.bind-cap-cur { font-size: 15px; color: var(--text-dim); margin-top: 12px; }
+
+/* SponsorBlock "Ask" prompt (press OK to skip the current segment) */
+#sb-prompt {
+  position: absolute;
+  right: 40px;
+  bottom: 120px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid var(--focus);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 18px;
+  color: var(--text);
+  z-index: 140;
+}
+
+/* Progressive-seek target marker + step badge (children of #seek-track) */
+#seek-target {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  background: var(--focus);
+  border-radius: 2px;
+  z-index: 4;
+}
+#seek-badge {
+  position: absolute;
+  bottom: 18px;
+  transform: translateX(-50%);
+  background: var(--focus);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+  z-index: 6;
+}
+
+/* ---------- Background playback: in-rail now-playing window + controls ---------- */
+/* Reserve two lines for the account label so loading the account name never
+   shifts the rest of the rail down. */
+#signin-label {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+  min-height: 2.5em;
+}
+
+/* Now-playing window: the single live <video> is reparented into this slot
+   while background-playing (it never leaves the document, so it keeps playing). */
+.rail-np { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 0; }
+.rail-np-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+/* ID selector so this beats the base `#video { width:100vw; height:100vh }`
+   rule -- otherwise the reparented video stays full-viewport size and only its
+   top-left corner shows inside the small slot. */
+#rail-np-video video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.rail-np-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.25;
+  padding: 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Controls row: play/pause, stop, next, clear queue. One focusable rail item;
+   left/right steps through the buttons, so the whole-row focus ring is dropped
+   in favour of highlighting the active button. */
+.rail-controls { display: flex; flex-direction: row; gap: 6px; padding: 8px 10px; }
+.rail-controls.focused { border-color: transparent; background: none; }
+.npc {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 0;
+}
+.npc .picon { line-height: 0; }
+.npc svg { width: 22px; height: 22px; fill: currentColor; display: block; }
+.npc.dim { opacity: 0.4; }
+.rail-controls.focused .npc.active { border-color: var(--focus); background: color-mix(in srgb, var(--focus) 25%, transparent); }
