@@ -1,12 +1,14 @@
 {
   "name": "couchtube",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CouchTube",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
     "build:sabr": "node scripts/build-sabr.mjs",
-    "dist": "npm run build:sabr && electron-builder --win zip"
+    "pack": "npm run build:sabr && electron-builder --win dir",
+    "dist": "npm run build:sabr && electron-builder --win zip && node scripts/pack-appzip.mjs",
+    "dist:fast": "npm run build:sabr && electron-builder --win zip -c.compression=store"
   },
   "keywords": [],
   "author": "Vojislav Vlasic",
@@ -27,6 +29,7 @@
     "appId": "com.couchtube.app",
     "productName": "CouchTube",
     "artifactName": "${productName}-${version}-win-x64.${ext}",
+    "npmRebuild": false,
     "directories": {
       "output": "dist"
     },

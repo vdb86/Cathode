@@ -39,6 +39,7 @@ const ryd = require('./ryd');
 const debug = require('./debug');
 const system = require('./system');
 const companion = require('./companion');
+const update = require('./update');
 const volume = require('./volume');
 // Apply a staged restore (requested in a previous session) BEFORE the app opens
 // the Data profile -- doing it now, while Data is unlocked and the prior
@@ -248,6 +249,9 @@ process.on('unhandledRejection', (e) => logger.error('unhandledRejection:', e));
 
 app.whenReady().then(async () => {
   logger.info('App start, version', app.getVersion());
+  // Self-updater boot step: consume a "just updated" marker (for the success
+  // toast) and wipe any stale update/ staging folder from a previous session.
+  try { update.finalizeBoot(); } catch (e) { logger.error('update.finalizeBoot threw:', e && e.message); }
   // Windows taskbar identity: match the packaged appId so the taskbar button
   // groups correctly and uses our icon (not the generic Electron one) in dev too.
   try { app.setAppUserModelId('com.couchtube.app'); } catch { /* non-Windows */ }
@@ -494,6 +498,18 @@ app.whenReady().then(async () => {
       logger.error('checkUpdate failed:', e);
       return { configured: true, ok: false, error: e.message };
     }
+  });
+  // In-app self-update (portable Windows build). status() tells the renderer
+  // whether in-place update is possible + whether a download is already staged;
+  // downloadUpdate streams + extracts + validates the release zip (progress via
+  // update:progress); applyUpdateNow launches the hidden applier and forces a
+  // real quit so it installs on close and relaunches the new version.
+  handle('app:updateStatus', async () => update.status());
+  handle('app:downloadUpdate', async () => update.download(win));
+  handle('app:applyUpdateNow', async () => {
+    const ok = update.applyNow();
+    if (ok) { isQuitting = true; setTimeout(() => app.quit(), 200); }
+    return { ok };
   });
   handle('app:openExternal', async (_e, url) => {
     const u = String(url || '');
@@ -796,7 +812,7 @@ function startCompanionIfEnabled(force) {
 
 // A genuine quit request (OS shutdown, app.quit from anywhere): let the window
 // 'close' handler through instead of hiding to the tray.
-app.on('before-quit', () => { isQuitting = true; try { companion.stop(); } catch { /* not running */ } try { volume.stop(); } catch { /* not running */ } });
+app.on('before-quit', () => { isQuitting = true; try { update.applyOnQuit(); } catch { /* no staged update */ } try { companion.stop(); } catch { /* not running */ } try { volume.stop(); } catch { /* not running */ } });
 
 // With exit-to-tray on, closing the last window must NOT end the process; the
 // tray keeps it alive. Off (default): quit as before.

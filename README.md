@@ -56,6 +56,8 @@ birthday, so in a way it's a present for everyone.
   presets and accents), an on-screen clock, backup/restore, and more.
 - **HTPC niceties** - launch on Windows startup, single-instance, run in the
   system tray, start minimized, and pre-roll / post-roll shell commands.
+- **One-click updates** - check for, download, and install new versions from
+  inside the app (Settings > About). No reinstalling by hand.
 - **CouchTube Remote** companion support - pair a phone over the LAN (QR or PIN)
   to navigate, type, control playback, and push links to the screen.
 
@@ -88,6 +90,18 @@ npm start
 ```
 
 Requires Node.js 18+. CouchTube starts fullscreen (F11 toggles).
+
+### Updating
+
+CouchTube updates itself. Open **Settings > About > Check for updates**; when a
+newer version is available, choose **Download update** and watch the progress.
+When it finishes you can **Restart now** to apply it, or just keep watching - the
+update installs automatically the next time you close CouchTube, and the app
+reopens on the new version. Your accounts, settings, downloads, and the optional
+`yt-dlp` / `ffmpeg` / `deno` binaries are all kept. No manual re-extracting.
+
+If you turn on **Notify me about updates** (Settings > About), CouchTube also
+tells you at launch when a new version is out.
 
 ## Controls
 

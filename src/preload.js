@@ -70,6 +70,10 @@ contextBridge.exposeInMainWorld('tv', {
 
   about: () => ipcRenderer.invoke('app:about'),
   checkUpdate: () => ipcRenderer.invoke('app:checkUpdate'),
+  updateStatus: () => ipcRenderer.invoke('app:updateStatus'),
+  downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
+  applyUpdateNow: () => ipcRenderer.invoke('app:applyUpdateNow'),
+  onUpdateProgress: (cb) => ipcRenderer.on('update:progress', (_e, p) => cb(p)),
 
   logPath: () => ipcRenderer.invoke('app:logPath'),
   logError: (msg) => ipcRenderer.send('app:logError', msg),

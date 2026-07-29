@@ -1251,6 +1251,17 @@ import {
         } catch (e) { /* offline or rate-limited: ignore */ }
       }, 8000);
     }
+    // If a self-update was just applied (the new version booted for the first
+    // time), confirm it once. Separate from the check above so it shows even with
+    // update notifications turned off.
+    if (window.tv.updateStatus) {
+      setTimeout(async () => {
+        try {
+          const us = await window.tv.updateStatus();
+          if (us && us.justUpdated) toast('Updated to CouchTube v' + us.justUpdated, 5000);
+        } catch (e) { /* ignore */ }
+      }, 3000);
+    }
     // Account isolation (s76): cover the main UI with the account overlay
     // IMMEDIATELY so the chooser -- not the rail/feed -- is what shows at
     // startup. It reads "Connecting…" until init resolves, then becomes the

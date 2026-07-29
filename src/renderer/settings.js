@@ -246,6 +246,16 @@ const Settings = (function () {
   // fetched when the Remote card opens and refreshed on the device-change push.
   let companionData = { running: false, enabled: false, connected: 0, pairing: null, devices: [] };
   let aboutInfo = null; // { version, electron, chrome, node } fetched at init
+  // App self-update (About card). updateInfo = last check {newer, latest};
+  // updateStaged = {version} once downloaded + ready to apply; updateBusy while a
+  // download runs; updateProgressText patched live onto the progress row. canSelf
+  // reflects whether in-place update is possible (packaged + writable folder).
+  let updateInfo = null;
+  let updateStaged = null;
+  let updateBusy = false;
+  let updateProgressText = '';
+  let updateCanSelf = false;
+  const UPDATE_PROGRESS_LABEL = 'Downloading update';
   let debugOn = false;  // Settings > About debug switch (global; via tv.debugGet/Set)
   let hooks = {};       // { toast, onOpenDialog, onCloseDialog, onLaunchAccounts, onLocaleChange }
 
@@ -823,18 +833,31 @@ const Settings = (function () {
       id: 'about', icon: 'ℹ️', label: 'About',
       build: () => {
         const a = aboutInfo || {};
-        return [
+        const list = [
           infoRow('CouchTube version', a.version || '-'),
           infoRow('Electron', a.electron || '-'),
           infoRow('Chromium', a.chrome || '-'),
           infoRow('Node', a.node || '-'),
-          actionRow('Check for updates', checkForUpdates),
-          boolRow('Notify me about updates', 'autoUpdateNotify'),
-          noteRow('Debugging'),
+          actionRow('Check for updates', checkForUpdates)
+        ];
+        // Update rows appear only after a check finds a newer version.
+        if (updateStaged) {
+          list.push(infoRow('Update waiting for restart', 'v' + updateStaged.version));
+          list.push(actionRow('Restart now', doApplyUpdate));
+          list.push(noteRow('Or just keep watching - the update installs by itself the next time you close CouchTube.'));
+        } else if (updateBusy) {
+          list.push(infoRow(UPDATE_PROGRESS_LABEL, updateProgressText || 'Starting...'));
+        } else if (updateInfo && updateInfo.newer) {
+          if (updateCanSelf) list.push(actionRow('Download update (v' + updateInfo.latest + ')', doDownloadUpdate));
+          else list.push(actionRow('Get the update (v' + updateInfo.latest + ')', doOpenReleasePage));
+        }
+        list.push(boolRow('Notify me about updates', 'autoUpdateNotify'));
+        list.push(noteRow('Debugging'));
+        return list.concat([
           debugRow(),
           actionRow('Export debug info', doExportDebug),
           noteRow('Turn on Debug logging, reproduce the problem, then Export debug info and send us the zip. It contains logs and system info with tokens and emails removed.')
-        ];
+        ]);
       }
     }
   ];
@@ -1261,18 +1284,73 @@ const Settings = (function () {
     if (hooks.onLocaleChange) hooks.onLocaleChange();
   }
   // About > check for updates. Best-effort: reports up-to-date / available /
-  // not-configured via a toast, and opens the release page when newer.
+  // not-configured via a toast. When newer, it reveals the in-app "Download
+  // update" button (or, where in-place update is not possible, a row that opens
+  // the release page). It does NOT auto-open a browser any more.
   async function checkForUpdates() {
     let r = null;
     try { r = await window.tv.checkUpdate(); } catch (e) {}
     const ver = (aboutInfo && aboutInfo.version) || '?';
     if (!r || r.configured === false) { if (hooks.toast) hooks.toast('Update checking is not set up yet (v' + ver + ')'); return; }
     if (!r.ok) { if (hooks.toast) hooks.toast('Could not check for updates'); return; }
+    updateInfo = r; // remembered so the build() can reveal the Download row
     if (r.newer) {
       if (hooks.toast) hooks.toast('Update available: v' + r.latest);
-      if (r.url && window.tv.openExternal) { try { await window.tv.openExternal(r.url); } catch (e) {} }
     } else if (hooks.toast) {
       hooks.toast('You are up to date (v' + (r.current || ver) + ')');
+    }
+    if (dialogCat === 'about') rebuildDialog();
+  }
+  // Download + stage the update in the background, showing live progress on the
+  // "Downloading update" row. On success the row set switches to "Restart now",
+  // and the update will otherwise install on the next close.
+  async function doDownloadUpdate() {
+    if (updateBusy || updateStaged) return;
+    updateBusy = true;
+    updateProgressText = 'Starting...';
+    if (dialogCat === 'about') rebuildDialog();
+    let r = null;
+    try { r = await window.tv.downloadUpdate(); } catch (e) {}
+    updateBusy = false;
+    if (r && r.ok) {
+      updateStaged = { version: r.version };
+      if (dialogCat === 'about') rebuildDialog();
+      if (hooks.toast) hooks.toast('Update downloaded. Restart now, or it installs when you next close CouchTube.', 6000);
+    } else {
+      if (dialogCat === 'about') rebuildDialog();
+      if (hooks.toast) hooks.toast('Update download failed' + (r && r.error ? ': ' + r.error : ''));
+    }
+  }
+  // Restart now: main launches the (hidden) applier and quits; the app closes,
+  // the update installs, and the new version relaunches itself.
+  async function doApplyUpdate() {
+    if (!updateStaged) return;
+    if (hooks.toast) hooks.toast('Updating and restarting...');
+    try { await window.tv.applyUpdateNow(); } catch (e) {}
+  }
+  // Fallback for installs that cannot self-update (dev run / read-only folder):
+  // open the GitHub release page so the user can download manually.
+  async function doOpenReleasePage() {
+    if (updateInfo && updateInfo.url && window.tv.openExternal) {
+      try { await window.tv.openExternal(updateInfo.url); } catch (e) {}
+    }
+  }
+  // Live download/extract progress -> patch the progress row's value in place
+  // (no full rebuild, so no flicker or focus jump on frequent events).
+  function onUpdateProgress(p) {
+    if (!p) return;
+    updateProgressText = p.phase === 'extract' ? 'Extracting...'
+      : p.phase === 'ready' ? 'Ready'
+      : (p.pct != null ? p.pct + '%' : 'Downloading...');
+    if (dialogCat !== 'about') return;
+    const kids = $('settings-list').children;
+    for (const el of kids) {
+      const lab = el.querySelector && el.querySelector('.settings-row-label');
+      if (lab && lab.textContent === UPDATE_PROGRESS_LABEL) {
+        const val = el.querySelector('.settings-row-value');
+        if (val) val.textContent = updateProgressText;
+        break;
+      }
     }
   }
   // About > Debug logging. Custom bool row: the flag is GLOBAL (not per-account
@@ -2166,6 +2244,7 @@ const Settings = (function () {
     hooks = opts || {};
     if (window.tv.onBackupProgress) window.tv.onBackupProgress(onBackupProgress);
     if (window.tv.onDlBinProgress) window.tv.onDlBinProgress(onDlBinProgress);
+    if (window.tv.onUpdateProgress) window.tv.onUpdateProgress(onUpdateProgress);
     // Companion device-change push: a phone paired or (dis)connected. If the
     // pairing modal is open, a new device means success - close it. Otherwise
     // just refresh the Remote card's device list if it is showing.
@@ -2191,6 +2270,15 @@ const Settings = (function () {
     }
     if (window.tv.about) {
       try { aboutInfo = await window.tv.about(); } catch { aboutInfo = null; }
+    }
+    if (window.tv.updateStatus) {
+      try {
+        const us = await window.tv.updateStatus();
+        updateCanSelf = !!(us && us.canSelfUpdate);
+        // A staged update from earlier this session (user chose "later") should
+        // still show the Restart row when Settings is reopened.
+        if (us && us.staged) { updateStaged = us.staged; updateInfo = { ok: true, configured: true, newer: true, latest: us.staged.version }; }
+      } catch { updateCanSelf = false; }
     }
     if (window.tv.debugGet) {
       try { const r = await window.tv.debugGet(); debugOn = !!(r && r.enabled); } catch { debugOn = false; }
