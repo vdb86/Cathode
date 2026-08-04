@@ -63,7 +63,7 @@ birthday, so in a way it's a present for everyone.
 
 ## Cathode Remote (Android companion)
 
-The companion app pairs with Cathode over your local network (scan a QR code
+The companion app [Cathode Remote](https://github.com/vdb86/Cathode-remote) pairs with Cathode over your local network (scan a QR code
 or type a PIN - no accounts, no cloud). Once paired it acts as a D-pad remote,
 a keyboard for search, and a playback controller with a now-playing readout. Its
 best trick: **share a YouTube link to it and the video plays on your HTPC** - the
