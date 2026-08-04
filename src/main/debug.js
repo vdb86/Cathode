@@ -6,9 +6,9 @@
 // the raw feed/player debug_*.json dumps (innertube.setDebugDumps), and (c) makes
 // the renderer forward its console + uncaught errors to the log (renderer-side).
 // The flag is GLOBAL (not per-account) and persisted to Data/debug_settings.json
-// so it survives a restart. The COUCHTUBE_DEBUG env var forces it on.
+// so it survives a restart. The CATHODE_DEBUG env var forces it on.
 //
-// exportBundle() gathers couchtube.log (+ .old), the debug_*.json dumps and a
+// exportBundle() gathers cathode.log (+ .old), the debug_*.json dumps and a
 // system snapshot into a single zip the user can send us. Everything written into
 // the bundle is run through redact() first so OAuth tokens, PO tokens and email
 // addresses never leave the machine.
@@ -30,7 +30,7 @@ function settingsFile() { return path.join(app.getPath('userData'), 'debug_setti
 
 let enabled = false;
 
-function envForced() { return process.env.COUCHTUBE_DEBUG === '1'; }
+function envForced() { return process.env.CATHODE_DEBUG === '1'; }
 
 function load() {
   try {
@@ -100,7 +100,7 @@ async function systemSnapshot() {
   const snap = {
     generatedAt: new Date().toISOString(),
     app: {
-      name: 'CouchTube',
+      name: 'Cathode',
       version: safe(() => app.getVersion(), '?'),
       packaged: safe(() => app.isPackaged, null),
       debugMode: enabled,
@@ -168,7 +168,7 @@ async function exportBundle() {
     try { fs.rmSync(stagingRoot, { recursive: true, force: true }); } catch {}
     fs.mkdirSync(stagingRoot, { recursive: true });
 
-    // 1) The live log + every rotated backup (couchtube.log.1..N, legacy .old),
+    // 1) The live log + every rotated backup (cathode.log.1..N, legacy .old),
     // each redacted.
     const lp = logger.logPath();
     const logBase = path.basename(lp);
@@ -197,7 +197,7 @@ async function exportBundle() {
     fs.writeFileSync(path.join(stagingRoot, 'system-snapshot.json'), redact(JSON.stringify(snap, null, 2)));
 
     // 4) Zip it up next to the app data.
-    const name = `couchtube-debug-${stamp()}.zip`;
+    const name = `cathode-debug-${stamp()}.zip`;
     const zipPath = path.join(app.getPath('userData'), name);
     try { fs.unlinkSync(zipPath); } catch {}
     await zipDir(stagingRoot, zipPath);

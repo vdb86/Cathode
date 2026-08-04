@@ -1,4 +1,4 @@
-/* qrcode-generator v1.4.4 (MIT, Kazuhiko Arase) - minified, vendored for CouchTube.
+/* qrcode-generator v1.4.4 (MIT, Kazuhiko Arase) - minified, vendored for Cathode.
    Exposes a global `qrcode(typeNumber, errorCorrectionLevel)` factory.
    Usage: var qr = qrcode(0, 'M'); qr.addData(str); qr.make();
           qr.getModuleCount(); qr.isDark(row, col); */

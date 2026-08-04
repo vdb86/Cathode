@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Local Backup & Restore (Windows). Zips the portable Data folder into a sibling
-// 'CouchTube-Backups' folder using PowerShell's Compress-Archive, and restores
+// 'Cathode-Backups' folder using PowerShell's Compress-Archive, and restores
 // via Expand-Archive. No npm dependencies - Node built-ins + PowerShell 5.1
 // (ships with Windows 10). Backups live OUTSIDE the Data dir so a backup never
 // contains previous backups.
@@ -22,7 +22,7 @@ function dataDir() { return app.getPath('userData'); }
 
 // Backups sit next to Data, not inside it.
 function backupsDir() {
-  const d = path.join(path.dirname(dataDir()), 'CouchTube-Backups');
+  const d = path.join(path.dirname(dataDir()), 'Cathode-Backups');
   try { fs.mkdirSync(d, { recursive: true }); } catch (e) { logErr('mkdir backupsDir failed:', e.message); }
   return d;
 }
@@ -116,7 +116,7 @@ function runBackupScript(src, dst, onProgress) {
   return new Promise((resolve, reject) => {
     let scriptPath;
     try {
-      scriptPath = path.join(os.tmpdir(), 'couchtube-backup.ps1');
+      scriptPath = path.join(os.tmpdir(), 'cathode-backup.ps1');
       fs.writeFileSync(scriptPath, PS_BACKUP_SCRIPT, 'utf8');
     } catch (e) { return reject(new Error('could not write backup script: ' + e.message)); }
     const child = spawn('powershell', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-Src', src, '-Dst', dst], { windowsHide: true });
@@ -155,7 +155,7 @@ async function createBackup(auto = false, onProgress = null) {
   try {
     const dir = dataDir();
     const out = backupsDir();
-    const name = `couchtube-backup-${stamp()}${auto ? '-auto' : ''}.zip`;
+    const name = `cathode-backup-${stamp()}${auto ? '-auto' : ''}.zip`;
     const zipPath = path.join(out, name);
     log('backup start ->', name);
     await runBackupScript(dir, zipPath, onProgress);
@@ -216,7 +216,7 @@ async function stageRestore(zipPath) {
       top.some((n) => /\.json$/i.test(n));
     if (!looksOurs) {
       try { fs.rmSync(staging, { recursive: true, force: true }); } catch { /* ignore */ }
-      return { ok: false, error: 'Not a CouchTube backup' };
+      return { ok: false, error: 'Not a Cathode backup' };
     }
     log('restore staged from', path.basename(String(zipPath)), '-- applies on relaunch');
     return { ok: true };

@@ -693,7 +693,7 @@ const Settings = (function () {
         daBoolRow('Enable DeArrow', 'enabled'),
         daBoolRow('Replace titles', 'titles'),
         daBoolRow('Replace thumbnails', 'thumbnails'),
-        daBoolRow('Debug logging (to couchtube.log)', 'debug')
+        daBoolRow('Debug logging (to cathode.log)', 'debug')
       ]
     },
     {
@@ -722,7 +722,7 @@ const Settings = (function () {
           setValue: (v) => { backupCadence = v; if (window.tv.backupSetCadence) window.tv.backupSetCadence(v); }
         });
         list.push(noteRow('Automatic backups keep the last 5; manual backups stay until you delete them.'));
-        list.push(noteRow('Restore replaces all data and restarts CouchTube. A backup only restores on this same Windows user.'));
+        list.push(noteRow('Restore replaces all data and restarts Cathode. A backup only restores on this same Windows user.'));
         return list;
       }
     },
@@ -759,7 +759,7 @@ const Settings = (function () {
           }
         });
         if (!ready) list.push(noteRow('Download options unlock once both yt-dlp and ffmpeg are installed. ffmpeg is required to merge video and audio.'));
-        list.push(noteRow('Binaries are downloaded from the official yt-dlp and ffmpeg release pages into CouchTube’s data folder.'));
+        list.push(noteRow('Binaries are downloaded from the official yt-dlp and ffmpeg release pages into Cathode’s data folder.'));
         // Download options -- global; unlocked only when both binaries are present.
         if (ready) {
           list.push(noteRow('Quick download settings'));
@@ -794,7 +794,7 @@ const Settings = (function () {
           list.push(noteRow('Notifications'));
           list.push(dlBoolRow('In-app notifications', 'notifyInApp'));
           list.push(dlBoolRow('Windows notifications', 'notifyOs'));
-          list.push(noteRow('Shown when a download finishes or fails. Windows notifications appear even when CouchTube is running in the background.'));
+          list.push(noteRow('Shown when a download finishes or fails. Windows notifications appear even when Cathode is running in the background.'));
         }
         return list;
       }
@@ -803,14 +803,14 @@ const Settings = (function () {
       id: 'remote', icon: '📱', label: 'Remote',
       build: () => {
         const list = [];
-        list.push(noteRow('Control CouchTube from the phone companion app over your local network.'));
+        list.push(noteRow('Control Cathode from the phone companion app over your local network.'));
         // Rows are always shown (not gated on the toggle): the toggle only
         // starts/stops the server, and "Pair a new device" starts it on demand
         // anyway. Keeping them static avoids a rebuild-on-toggle and the empty-card
         // glitch (options only appearing after exit + reopen).
         list.push(sysBoolRow('Companion remote', 'companionEnabled'));
-        list.push(sysTextRow('Device name', 'companionName', 'CouchTube, Living Room PC'));
-        list.push(noteRow('Name shown to phones during discovery / pairing. Blank uses the default name (CouchTube).'));
+        list.push(sysTextRow('Device name', 'companionName', 'Cathode, Living Room PC'));
+        list.push(noteRow('Name shown to phones during discovery / pairing. Blank uses the default name (Cathode).'));
         list.push(sysNumRow('Port', 'companionPort', { min: 1024, max: 65535, def: 8878 }));
         list.push(noteRow('Changing the name or port restarts the server; re-pair devices if they cannot reconnect.'));
         list.push(actionRow('Pair a new device', openPair));
@@ -834,7 +834,7 @@ const Settings = (function () {
       build: () => {
         const a = aboutInfo || {};
         const list = [
-          infoRow('CouchTube version', a.version || '-'),
+          infoRow('Cathode version', a.version || '-'),
           infoRow('Electron', a.electron || '-'),
           infoRow('Chromium', a.chrome || '-'),
           infoRow('Node', a.node || '-'),
@@ -844,7 +844,7 @@ const Settings = (function () {
         if (updateStaged) {
           list.push(infoRow('Update waiting for restart', 'v' + updateStaged.version));
           list.push(actionRow('Restart now', doApplyUpdate));
-          list.push(noteRow('Or just keep watching - the update installs by itself the next time you close CouchTube.'));
+          list.push(noteRow('Or just keep watching - the update installs by itself the next time you close Cathode.'));
         } else if (updateBusy) {
           list.push(infoRow(UPDATE_PROGRESS_LABEL, updateProgressText || 'Starting...'));
         } else if (updateInfo && updateInfo.newer) {
@@ -892,7 +892,7 @@ const Settings = (function () {
     clockSeconds: 'Include seconds in the displayed time.',
     clockDateFormat: 'How the date is written out.',
     // General
-    bootSection: 'Which section CouchTube opens on when it starts.',
+    bootSection: 'Which section Cathode opens on when it starts.',
     feedSnapshots: 'Paint last session feed instantly at startup, then refresh in the background. Off always loads fresh (no flash, slightly slower first paint).',
     recordHistory: 'Report the videos you watch to your YouTube watch history.',
     appExit: 'Whether Back on the main rail exits after one press, or needs two.',
@@ -964,12 +964,12 @@ const Settings = (function () {
     'da:enabled': 'Replace clickbait titles and thumbnails with community-chosen ones (DeArrow).',
     'da:titles': 'Use DeArrow crowd-sourced titles.',
     'da:thumbnails': 'Use DeArrow crowd-sourced thumbnails.',
-    'da:debug': 'Write DeArrow diagnostics to couchtube.log.',
+    'da:debug': 'Write DeArrow diagnostics to cathode.log.',
     // Downloads
     'bin:ytdlp': 'The downloader engine. Press to install it, or to reinstall the latest.',
     'bin:ffmpeg': 'Merges video and audio and converts formats. Required for downloads to work.',
     'bin:deno': 'Optional JavaScript runtime that makes downloads much faster and avoids missing-format errors.',
-    'dl:autoUpdateYtdlp': 'Check for and install a newer yt-dlp automatically each time CouchTube launches.',
+    'dl:autoUpdateYtdlp': 'Check for and install a newer yt-dlp automatically each time Cathode launches.',
     'dl:type': 'Whether a quick, one-press download grabs the full video or just the audio.',
     'dl:qualityCap': 'Highest video resolution a download will use.',
     'dl:container': 'File format for downloaded video.',
@@ -989,14 +989,14 @@ const Settings = (function () {
     'dl:notifyInApp': 'Show an in-app toast when a download finishes or fails.',
     'dl:notifyOs': 'Show a Windows notification when a download finishes or fails, even in the background.',
     // Backup & restore
-    'act:Back up now': 'Save a backup of all your CouchTube data right now.',
+    'act:Back up now': 'Save a backup of all your Cathode data right now.',
     'act:Restore a backup': 'Pick a saved backup to restore. This replaces all current data and restarts the app.',
     'act:Restore from a file…': 'Restore from a backup file you choose from disk.',
-    'act:Automatic backups': 'How often CouchTube backs itself up. The last 5 automatic backups are kept.',
+    'act:Automatic backups': 'How often Cathode backs itself up. The last 5 automatic backups are kept.',
     // one-off actions
     'act:Clear search history': 'Delete all your remembered searches.',
     'act:Reset controls to defaults': 'Undo every controller and keyboard rebinding.',
-    'act:Check for updates': 'Check whether a newer version of CouchTube is available.',
+    'act:Check for updates': 'Check whether a newer version of Cathode is available.',
     'act:Debug logging': 'Record extra detail (renderer errors, network failures, raw feed dumps) to the log so we can diagnose a problem. Leave off for normal use.',
     'act:Export debug info': 'Bundle the logs and system info into a zip you can send us. Tokens and email addresses are removed first.',
     'act:Check for yt-dlp updates': 'Check whether a newer yt-dlp is available.',
@@ -1006,13 +1006,13 @@ const Settings = (function () {
     cogVis: 'Show or hide the cog (More) menu. Hiding only applies when no buttons are inside it.',
     bindPad: 'Controller binding for this action. Press OK, then a button to add or remove it.',
     bindKey: 'Keyboard binding for this action. Press OK, then a key to add or remove it.',
-    autoUpdateNotify: 'Tell me when a newer version of CouchTube is available.',
+    autoUpdateNotify: 'Tell me when a newer version of Cathode is available.',
     // Rating counts + Shorts
     ratingCountsPlayer: 'Show like and dislike counts under the title in the player. Dislikes come from the Return YouTube Dislike service.',
     ratingCountsCards: 'Show like and dislike counts on every video card. Needs one Return YouTube Dislike lookup per card, so feeds load a little slower.',
     hideShorts: 'Hide Shorts (vertical short videos) and the Shorts shelf from all feeds.',
     // Network
-    proxyEnabled: 'Route CouchTube traffic through a proxy server.',
+    proxyEnabled: 'Route Cathode traffic through a proxy server.',
     proxyServer: 'Proxy address, e.g. http://host:port or socks5://host:port.',
     proxyBypass: 'Hosts that should skip the proxy (comma or space separated). Optional.',
     dohEnabled: 'Resolve names through a custom DNS-over-HTTPS server instead of the system resolver.',
@@ -1315,7 +1315,7 @@ const Settings = (function () {
     if (r && r.ok) {
       updateStaged = { version: r.version };
       if (dialogCat === 'about') rebuildDialog();
-      if (hooks.toast) hooks.toast('Update downloaded. Restart now, or it installs when you next close CouchTube.', 6000);
+      if (hooks.toast) hooks.toast('Update downloaded. Restart now, or it installs when you next close Cathode.', 6000);
     } else {
       if (dialogCat === 'about') rebuildDialog();
       if (hooks.toast) hooks.toast('Update download failed' + (r && r.error ? ': ' + r.error : ''));
@@ -1496,13 +1496,13 @@ const Settings = (function () {
   }
   async function doRestore(zipPath) {
     if (!zipPath) return;
-    if (hooks.toast) hooks.toast('Restoring… CouchTube will restart');
+    if (hooks.toast) hooks.toast('Restoring… Cathode will restart');
     try { await window.tv.backupRestore(zipPath); } catch (e) {}
   }
   async function doBackupBrowse() {
     let r = null;
     try { r = await window.tv.backupBrowse(); } catch (e) {}
-    if (r && r.ok) { if (hooks.toast) hooks.toast('Restoring… CouchTube will restart'); }
+    if (r && r.ok) { if (hooks.toast) hooks.toast('Restoring… Cathode will restart'); }
     else if (r && r.canceled) { /* user backed out */ }
     else if (hooks.toast) hooks.toast('Restore failed' + (r && r.error ? ': ' + r.error : ''));
   }

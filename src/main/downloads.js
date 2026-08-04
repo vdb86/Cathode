@@ -52,7 +52,7 @@ const DENO_ZIP_URL = 'https://github.com/denoland/deno/releases/latest/download/
 
 // ---- GLOBAL settings ----
 // Quick-download defaults (all overridable in Settings > Downloads). saveDir
-// empty means "resolve to <Windows Downloads>\CouchTube" (see resolveSaveDir).
+// empty means "resolve to <Windows Downloads>\Cathode" (see resolveSaveDir).
 const DEFAULTS = {
   saveDir: '',
   qualityCap: 1080,          // best video height <= this
@@ -97,7 +97,7 @@ function resolveSaveDir() {
   const s = readSettings();
   return s.saveDir && String(s.saveDir).trim()
     ? String(s.saveDir).trim()
-    : path.join(app.getPath('downloads'), 'CouchTube');
+    : path.join(app.getPath('downloads'), 'Cathode');
 }
 
 // ---- binary state ----
@@ -185,7 +185,7 @@ async function getState() {
 // ---- HTTP helpers (redirect-following; GitHub 302s to a CDN host) ----
 function httpsGetJson(url) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'CouchTube', 'Accept': 'application/vnd.github+json' } }, (res) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Cathode', 'Accept': 'application/vnd.github+json' } }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
         res.resume(); return resolve(httpsGetJson(res.headers.location));
       }
@@ -203,7 +203,7 @@ function httpsGetJson(url) {
 function httpsDownload(url, dest, onProgress, depth = 0) {
   return new Promise((resolve, reject) => {
     if (depth > 6) return reject(new Error('too many redirects'));
-    const req = https.get(url, { headers: { 'User-Agent': 'CouchTube' } }, (res) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Cathode' } }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
         res.resume(); return resolve(httpsDownload(res.headers.location, dest, onProgress, depth + 1));
       }
@@ -284,8 +284,8 @@ async function installBinaries(onProgress, which) {
 
   // 2. ffmpeg static build (zip, ~80 MB) -> temp, extract, lift out the exes.
   if (doF) {
-    const tmpZip = path.join(os.tmpdir(), 'couchtube-ffmpeg.zip');
-    const tmpDir = path.join(os.tmpdir(), 'couchtube-ffmpeg');
+    const tmpZip = path.join(os.tmpdir(), 'cathode-ffmpeg.zip');
+    const tmpDir = path.join(os.tmpdir(), 'cathode-ffmpeg');
     emit('Downloading ffmpeg…', 0);
     await httpsDownload(FFMPEG_ZIP_URL, tmpZip, ({ received, total }) => emit('Downloading ffmpeg…', total ? received / total : null));
     emit('Extracting ffmpeg…', 0.92);
@@ -304,8 +304,8 @@ async function installBinaries(onProgress, which) {
   // 3. Deno (zip, ~40 MB) -> temp, extract deno.exe into bin (same folder as
   // yt-dlp.exe, so yt-dlp auto-detects it for nsig).
   if (doD) {
-    const tmpZip = path.join(os.tmpdir(), 'couchtube-deno.zip');
-    const tmpDir = path.join(os.tmpdir(), 'couchtube-deno');
+    const tmpZip = path.join(os.tmpdir(), 'cathode-deno.zip');
+    const tmpDir = path.join(os.tmpdir(), 'cathode-deno');
     emit('Downloading Deno…', 0);
     await httpsDownload(DENO_ZIP_URL, tmpZip, ({ received, total }) => emit('Downloading Deno…', total ? received / total : null));
     emit('Extracting Deno…', 0.92);
@@ -714,7 +714,7 @@ function buildFfmetaFile(tmpDir, id, payload, s, segments) {
     out += '[CHAPTER]\nTIMEBASE=1/1000\nSTART=' + ch.startMs + '\nEND=' + ch.endMs + '\ntitle=' + esc(ch.title) + '\n';
   }
 
-  const p = path.join(tmpDir, 'couchtube-sabr-meta-' + id + '.txt');
+  const p = path.join(tmpDir, 'cathode-sabr-meta-' + id + '.txt');
   try { fs.writeFileSync(p, out, 'utf8'); return p; } catch (e) { logErr('ffmeta write failed:', e.message); return ''; }
 }
 
@@ -742,7 +742,7 @@ async function postProcessSabrAudio(tmpPath, finalPath, container, s, payload, v
   // Cover art (best-effort download).
   let thumbPath = '';
   if (s.embedThumbnail && payload.thumbnailUrl && containerSupportsCover(container)) {
-    const tp = path.join(tmpDir, 'couchtube-sabr-thumb-' + Date.now() + '.jpg');
+    const tp = path.join(tmpDir, 'cathode-sabr-thumb-' + Date.now() + '.jpg');
     try { await httpsDownload(payload.thumbnailUrl, tp); thumbPath = tp; }
     catch (e) { logErr('thumbnail download failed:', e.message); }
   }
@@ -826,7 +826,7 @@ async function runSabrDownload(item) {
     const chosen = sabrdl.pickAudioFormat(payload.sabrFormats, select);
     srcMime = (chosen && chosen.mimeType) || '';
     const tmpExt = /webm|opus/i.test(srcMime) ? 'webm' : 'm4a';
-    tmpPath = path.join(os.tmpdir(), 'couchtube-sabr-' + item.id + '.' + tmpExt);
+    tmpPath = path.join(os.tmpdir(), 'cathode-sabr-' + item.id + '.' + tmpExt);
     try {
       await sabrdl.streamAudioToFile({
         payload, select, tmpPath, signal: ac.signal,

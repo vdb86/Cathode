@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="Banner.png" alt="CouchTube" width="860">
+  <img src="Cathode.png" alt="Cathode" width="860">
 </p>
 
-# CouchTube
+# Cathode
 
 A controller-first YouTube client for Windows HTPCs. It recreates the feel of
 [SmartTube](https://github.com/yuliskov/SmartTube) on the desktop: a 10-foot,
@@ -16,15 +16,15 @@ big screen.
 
 ## Why I made this
 
-CouchTube exists because Windows never had a good way to enjoy YouTube from the
+Cathode exists because Windows never had a good way to enjoy YouTube from the
 couch. As an HTPC user myself, I wanted to browse and watch on the big screen
 with just a controller - no browser, no keyboard, no mouse. So I built one.
 
-I also wrote the **CouchTube Remote** companion app for Android. It turns your
-phone into a simple remote for CouchTube, and it lets you send any YouTube link
+I also wrote the **Cathode Remote** companion app for Android. It turns your
+phone into a simple remote for Cathode, and it lets you send any YouTube link
 straight to your HTPC - tap share, and it plays on the screen.
 
-Like my other projects, CouchTube is free. I'm releasing it on my son Mihajlo's second
+Like my other projects, Cathode is free. I'm releasing it on my son Mihajlo's second
 birthday, so in a way it's a present for everyone.
 
 ## Features
@@ -58,17 +58,17 @@ birthday, so in a way it's a present for everyone.
   system tray, start minimized, and pre-roll / post-roll shell commands.
 - **One-click updates** - check for, download, and install new versions from
   inside the app (Settings > About). No reinstalling by hand.
-- **CouchTube Remote** companion support - pair a phone over the LAN (QR or PIN)
+- **Cathode Remote** companion support - pair a phone over the LAN (QR or PIN)
   to navigate, type, control playback, and push links to the screen.
 
-## CouchTube Remote (Android companion)
+## Cathode Remote (Android companion)
 
-The companion app pairs with CouchTube over your local network (scan a QR code
+The companion app pairs with Cathode over your local network (scan a QR code
 or type a PIN - no accounts, no cloud). Once paired it acts as a D-pad remote,
 a keyboard for search, and a playback controller with a now-playing readout. Its
 best trick: **share a YouTube link to it and the video plays on your HTPC** - the
 window comes to the front, goes fullscreen, and starts playing. You can also send
-CouchTube to fullscreen or hide it back to the tray from your phone.
+Cathode to fullscreen or hide it back to the tray from your phone.
 
 The Android app lives in its own repository.
 
@@ -76,8 +76,8 @@ The Android app lives in its own repository.
 
 ### From a release
 
-Download the latest `CouchTube-<version>-win-x64.zip`, extract it anywhere, and
-run `CouchTube.exe`. It is fully portable - all data (accounts, settings,
+Download the latest `Cathode-<version>-win-x64.zip`, extract it anywhere, and
+run `Cathode.exe`. It is fully portable - all data (accounts, settings,
 downloads) is stored next to the executable, and it downloads the optional
 `yt-dlp`, `ffmpeg`, and `deno` binaries beside itself the first time you use the
 download feature.
@@ -89,18 +89,18 @@ npm install
 npm start
 ```
 
-Requires Node.js 18+. CouchTube starts fullscreen (F11 toggles).
+Requires Node.js 18+. Cathode starts fullscreen (F11 toggles).
 
 ### Updating
 
-CouchTube updates itself. Open **Settings > About > Check for updates**; when a
+Cathode updates itself. Open **Settings > About > Check for updates**; when a
 newer version is available, choose **Download update** and watch the progress.
 When it finishes you can **Restart now** to apply it, or just keep watching - the
-update installs automatically the next time you close CouchTube, and the app
+update installs automatically the next time you close Cathode, and the app
 reopens on the new version. Your accounts, settings, downloads, and the optional
 `yt-dlp` / `ffmpeg` / `deno` binaries are all kept. No manual re-extracting.
 
-If you turn on **Notify me about updates** (Settings > About), CouchTube also
+If you turn on **Notify me about updates** (Settings > About), Cathode also
 tells you at launch when a new version is out.
 
 ## Controls
@@ -136,7 +136,7 @@ stays a lightweight TV UI talking to it over IPC - the same architecture
 ```
 src/main/index.js       Electron main: window, tray, IPC endpoints, CORS handlers
 src/main/innertube.js   Data layer: youtubei.js sessions, TV OAuth, feeds, streams
-src/main/companion.js   LAN WebSocket server for the CouchTube Remote app
+src/main/companion.js   LAN WebSocket server for the Cathode Remote app
 src/main/sponsorblock.js, potoken.js, volume.js, logger.js, system.js
 src/preload.js          contextBridge: the minimal window.tv API
 src/renderer/           vanilla-JS TV UI (native ES modules, no framework)
@@ -153,11 +153,11 @@ npm run dist
 ```
 
 Runs the SABR bundle build (`npm run build:sabr`) and then
-`electron-builder --win zip`, producing `dist/CouchTube-<version>-win-x64.zip`.
+`electron-builder --win zip`, producing `dist/Cathode-<version>-win-x64.zip`.
 
 ## Disclaimer
 
-CouchTube talks to YouTube's private InnerTube API, the same way SmartTube and
+Cathode talks to YouTube's private InnerTube API, the same way SmartTube and
 FreeTube do. It is **unofficial** and not affiliated with, endorsed by, or
 sponsored by YouTube or Google. It can break whenever Google changes their API.
 Because sign-in uses a Google account, there is a nonzero account risk (as with
@@ -166,7 +166,7 @@ and trademarks belong to Google.
 
 ## Credits and acknowledgements
 
-CouchTube stands on a lot of excellent open-source work. Thank you to:
+Cathode stands on a lot of excellent open-source work. Thank you to:
 
 - **[SmartTube](https://github.com/yuliskov/SmartTube)** by Yuriy Liskov - the
   design this project recreates on the desktop, used with the author's kind
@@ -192,6 +192,6 @@ CouchTube stands on a lot of excellent open-source work. Thank you to:
 
 ## License
 
-CouchTube is free software licensed under the
+Cathode is free software licensed under the
 **[GNU General Public License v3.0 or later](LICENSE)**. See the `LICENSE` file
 for the full text.

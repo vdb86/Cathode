@@ -27,7 +27,7 @@ const DEFAULTS = {
   enabled: false,     // master switch (off until the user opts in)
   titles: true,       // replace clickbait titles
   thumbnails: true,   // replace clickbait thumbnails (dearrow-thumb generator)
-  debug: false        // log every lookup + thumbnail HTTP status to couchtube.log
+  debug: false        // log every lookup + thumbnail HTTP status to cathode.log
 };
 
 // Raw branding responses cached in-memory (per videoID) so re-rendering a feed

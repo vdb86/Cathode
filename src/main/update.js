@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // In-app self-updater for the portable Windows build.
 //
-// Windows locks the running CouchTube.exe + its DLLs + resources/app.asar while
+// Windows locks the running Cathode.exe + its DLLs + resources/app.asar while
 // the app is running, so the files CANNOT be overwritten in place. This module
 // therefore: (1) downloads the release zip (progress to the renderer), (2)
 // extracts + validates it into a staging folder beside the exe, then (3) hands
 // the actual file-replacement to a tiny generated helper (cmd launched hidden
-// via a wscript vbs shim) that runs AFTER CouchTube exits, robocopies the staged
+// via a wscript vbs shim) that runs AFTER Cathode exits, robocopies the staged
 // files over the install dir (no purge, so Data/ and the yt-dlp/ffmpeg/deno
 // binaries survive), relaunches, and cleans up. Nothing is shown to the user
 // about URLs, sizes, or checksums.
@@ -23,7 +23,7 @@ const { Readable, Transform } = require('stream');
 const { pipeline } = require('stream/promises');
 const logger = require('./logger');
 
-const REPO = 'vdb86/CouchTube';
+const REPO = 'vdb86/Cathode';
 
 // Session state.
 let staged = null;        // { version, stagingDir } once a download is ready
@@ -84,7 +84,7 @@ function safeUnlink(p) { try { fs.unlinkSync(p); } catch { /* ignore */ } }
 
 async function fetchLatestRelease() {
   const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-    headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'CouchTube' }
+    headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Cathode' }
   });
   if (!res.ok) throw new Error('GitHub API ' + res.status);
   const j = await res.json();
@@ -94,7 +94,7 @@ async function fetchLatestRelease() {
 function escapeReg(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 // Choose the asset to download. Prefer the SMALL app-only delta zip
-// (CouchTube-<ver>-app-e<electron>-x64.zip) when the delta's embedded Electron
+// (Cathode-<ver>-app-e<electron>-x64.zip) when the delta's embedded Electron
 // version matches our installed runtime - then only resources/app.asar changed,
 // so a few MB replaces the ~150MB full download. Otherwise (Electron was bumped,
 // or no delta was published) fall back to the full win-x64 zip, which is always
@@ -113,7 +113,7 @@ function pickZipAsset(assets, version) {
 // Stream the asset to disk with throttled progress callbacks (backpressure kept
 // via a counting Transform inside the pipeline).
 async function downloadTo(url, dest, expectedSize, onProgress) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'CouchTube' }, redirect: 'follow' });
+  const res = await fetch(url, { headers: { 'User-Agent': 'Cathode' }, redirect: 'follow' });
   if (!res.ok || !res.body) throw new Error('download ' + res.status);
   const total = expectedSize || Number(res.headers.get('content-length')) || 0;
   let received = 0, lastPct = -1, lastAt = 0;
@@ -160,14 +160,14 @@ function normalizeAppOnly(staging) {
   }
 }
 
-// A staged build is valid when app.asar is present (plus CouchTube.exe for the
+// A staged build is valid when app.asar is present (plus Cathode.exe for the
 // full zip; the app-only delta ships resources/app.asar only). Electron's patched
 // fs can read package.json out of the asar, giving the true version; if that read
 // fails we fall back to the release tag.
 function validateStaging(staging, tagVersion, appOnly) {
   const asar = path.join(staging, 'resources', 'app.asar');
   if (!fs.existsSync(asar)) return null;
-  if (!appOnly && !fs.existsSync(path.join(staging, 'CouchTube.exe'))) return null;
+  if (!appOnly && !fs.existsSync(path.join(staging, 'Cathode.exe'))) return null;
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(asar, 'package.json'), 'utf8'));
     if (pkg && pkg.version) return String(pkg.version);
@@ -238,7 +238,7 @@ function spawnHelper() {
       '  goto waitloop',
       ')',
       'robocopy "' + P.staging + '" "' + P.inst + '" /E /R:20 /W:1 /NP /NFL /NDL >"' + P.log + '" 2>&1',
-      'start "" "' + path.join(P.inst, 'CouchTube.exe') + '"',
+      'start "" "' + path.join(P.inst, 'Cathode.exe') + '"',
       'rmdir /S /Q "' + P.root + '"',
       'del /F /Q "' + P.vbs + '" >nul 2>&1',
       '(goto) 2>nul & del /F /Q "%~f0"',

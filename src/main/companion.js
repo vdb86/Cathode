@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Companion command server (CouchTube side). A LAN WebSocket server that the
-// phone "CouchTube Remote" app pairs with to drive the app: navigation,
+// Companion command server (Cathode side). A LAN WebSocket server that the
+// phone "Cathode Remote" app pairs with to drive the app: navigation,
 // playback, text entry, link-share, and a now-playing / queue readout streamed
 // back. v1 is "controller + now-playing" (the phone does NOT browse the
 // library). Full wire protocol + phases live in PLANS.md "Companion command
@@ -51,7 +51,7 @@ let bonjour = null;         // Bonjour instance
 let mdnsService = null;
 let mdnsTimer = null;       // periodic re-announce interval
 let port = DEFAULT_PORT;
-let tvName = 'CouchTube'; // default device name shown to phones; overridden by opts.tvName when the user sets one
+let tvName = 'Cathode'; // default device name shown to phones; overridden by opts.tvName when the user sets one
 let commandHandler = null;  // (type, msg, ctx) -> void; set by index.js (renderer bridge)
 let onDeviceChangeCb = null;// () -> void; lets the UI refresh the paired/connected list
 let onPairRequestCb = null; // (info) -> void; phone asked to pair -> TV shows the PIN
@@ -107,7 +107,7 @@ function pairingInfo() {
   const host = lanIp();
   const pin = active ? pairing.pin : null;
   // QR payload the phone scans: host + port + one-time PIN.
-  const qr = active ? ('couchtube://pair?host=' + host + '&port=' + port + '&pin=' + pin) : null;
+  const qr = active ? ('cathode://pair?host=' + host + '&port=' + port + '&pin=' + pin) : null;
   // ttlMs lets the TV pairing modal auto-close when the PIN expires.
   const ttlMs = active ? Math.max(0, pairing.expires - Date.now()) : 0;
   return { active, host, port, pin, qr, ttlMs, running: isRunning() };
@@ -167,9 +167,9 @@ function handleMessage(ws, raw) {
 
   if (t === 'ping') return send(ws, { t: 'pong' });
   if (t === 'hello') {
-    // Version negotiation: refuse a remote that needs a newer CouchTube.
+    // Version negotiation: refuse a remote that needs a newer Cathode.
     if (msg.minVersion && Number(msg.minVersion) > PROTOCOL_VERSION) {
-      return send(ws, { t: 'error', code: 'version', message: 'This remote needs a newer CouchTube. Please update CouchTube.' });
+      return send(ws, { t: 'error', code: 'version', message: 'This remote needs a newer Cathode. Please update Cathode.' });
     }
     return send(ws, { t: 'hello', tvName, version: PROTOCOL_VERSION, minVersion: MIN_SUPPORTED_VERSION, needsPair: !st.authed });
   }
@@ -292,11 +292,11 @@ function advertiseMdns() {
     bonjour = new Bonjour();
     mdnsService = bonjour.publish({
       name: tvName,
-      type: 'couchtube',
+      type: 'cathode',
       port,
       txt: { name: tvName, version: String(PROTOCOL_VERSION), port: String(port) }
     });
-    logger.info('[companion] mDNS advertising _couchtube._tcp on port', port);
+    logger.info('[companion] mDNS advertising _cathode._tcp on port', port);
     // bonjour-service re-announces on an exponential backoff (1s, 3s, 9s ... up to
     // 1h), so after the first minute the gaps get large and a phone that starts
     // browsing late can miss the unsolicited announcement (it then depends on its

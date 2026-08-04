@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Windows system-volume control via the OS media keys (VK_VOLUME_UP / _DOWN /
-// _MUTE). This is the SINGLE volume for CouchTube - there is no separate in-app
+// _MUTE). This is the SINGLE volume for Cathode - there is no separate in-app
 // <video> volume any more; the companion remote's volume up/down/mute drive the
 // Windows master volume directly (same idea as Plei's keyboard.send('volume ...'),
 // but from Electron main via keybd_event).

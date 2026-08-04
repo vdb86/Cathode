@@ -66,12 +66,12 @@ const GUEST_ID = 'guest';
 
 // Diagnostic dumps (raw feed / player / manifest captures) are gated behind a
 // flag so normal runs don't scatter debug_*.json into the Data folder. Enable
-// with the env var COUCHTUBE_DEBUG_DUMPS=1 when investigating a feed/parse/stream
+// with the env var CATHODE_DEBUG_DUMPS=1 when investigating a feed/parse/stream
 // issue. debugDump writes safeDump(data) (or a raw string) to userData/<name>.
-let DEBUG_DUMPS = process.env.COUCHTUBE_DEBUG_DUMPS === '1';
+let DEBUG_DUMPS = process.env.CATHODE_DEBUG_DUMPS === '1';
 // Toggled live from Settings > About (via the debug module) so a user can
 // capture raw feed/player dumps without setting an env var + restarting.
-function setDebugDumps(on) { DEBUG_DUMPS = !!on || process.env.COUCHTUBE_DEBUG_DUMPS === '1'; }
+function setDebugDumps(on) { DEBUG_DUMPS = !!on || process.env.CATHODE_DEBUG_DUMPS === '1'; }
 function debugDump(name, data) {
   if (!DEBUG_DUMPS) return;
   try { fs.writeFileSync(path.join(app.getPath('userData'), name), typeof data === 'string' ? data : safeDump(data)); } catch (e) {}
@@ -348,7 +348,7 @@ function installEvaluator() {
 // ourselves. Those nodes are expected and not ones we render, so we SWALLOW the
 // handler entirely: logging even a terse line per node floods the log AND, since
 // logger.info writes synchronously on the main (input-routing) thread, the
-// volume caused visible input jank while feeds parsed. Set COUCHTUBE_DEBUG_DUMPS=1
+// volume caused visible input jank while feeds parsed. Set CATHODE_DEBUG_DUMPS=1
 // to see them again while debugging a parser issue.
 function installParserErrorHandler() {
   try {
@@ -1629,7 +1629,7 @@ async function getTvFeedVideos(browseId, debugName, extra = {}, opts = {}) {
     // extractor extended (s68: the user lost 'Remove from history').
     if (videos.length && videos.every((vv) => !vv.feedbackToken)) {
       // Tripwire: history came back tokenless again (the s68 minimal-context
-      // fix regressed or YouTube changed the shape). Set COUCHTUBE_DEBUG_DUMPS=1
+      // fix regressed or YouTube changed the shape). Set CATHODE_DEBUG_DUMPS=1
       // to capture the raw page.
       logger.error(`${debugName}: 0/${videos.length} items carry a feedbackToken (Remove-from-history may be broken)`);
       debugDump(`debug_${debugName}_notoken_raw.json`, rawData);
@@ -2530,7 +2530,7 @@ async function removePlaylist(playlistId) {
 // response ONLY) on the TV session, which skips the watch-next parse that
 // crashes VideoInfo on the TV client; addToWatchHistory then pings the
 // account's playback-tracking URL. The stream getInfo is anonymous (tubeAnon)
-// and can't attribute to the account, so THIS is what makes couchtube-played
+// and can't attribute to the account, so THIS is what makes cathode-played
 // videos appear in History. Fire-and-forget from the renderer at play start.
 async function recordHistory(videoId) {
   await authReady();

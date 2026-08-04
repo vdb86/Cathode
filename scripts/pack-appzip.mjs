@@ -9,7 +9,7 @@
 // install dir with no special-casing.
 //
 // The Electron runtime version is baked into the filename
-// (CouchTube-<ver>-app-e<electron>-x64.zip). The updater downloads this delta ONLY
+// (Cathode-<ver>-app-e<electron>-x64.zip). The updater downloads this delta ONLY
 // when the installed runtime's process.versions.electron matches that <electron>;
 // otherwise it falls back to the full zip. So publish BOTH assets every release.
 //
@@ -30,7 +30,7 @@ if (!existsSync(path.join(resDir, 'app.asar'))) {
   process.exit(1);
 }
 
-const out = path.join(root, 'dist', `CouchTube-${pkg.version}-app-e${electronVer}-x64.zip`);
+const out = path.join(root, 'dist', `Cathode-${pkg.version}-app-e${electronVer}-x64.zip`);
 try { rmSync(out, { force: true }); } catch { /* ignore */ }
 
 // Compress-Archive of the resources DIRECTORY yields entries rooted at

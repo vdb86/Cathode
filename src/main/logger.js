@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// File logger - couchtube.log
+// File logger - cathode.log
 //
 // Location strategy (first WRITABLE wins):
 //   1. Portable exe folder (electron-builder portable sets PORTABLE_EXECUTABLE_DIR)
@@ -17,7 +17,7 @@ const { app } = require('electron');
 // Rotation budget depends on mode. Normal runs stay tidy (routine chatter is at
 // DEBUG and dropped, so 1 MB + 1 backup is plenty). Debug runs need room to hold
 // a whole reproduction, so the per-file cap and backup count both grow. Rotated
-// files are numbered couchtube.log.1 (newest) .. .N (oldest).
+// files are numbered cathode.log.1 (newest) .. .N (oldest).
 const MB = 1024 * 1024;
 function limits() {
   return debugEnabled
@@ -27,7 +27,7 @@ function limits() {
 
 function isWritable(dir) {
   try {
-    const probe = path.join(dir, '.couchtube-write-test');
+    const probe = path.join(dir, '.cathode-write-test');
     fs.writeFileSync(probe, '');
     fs.unlinkSync(probe);
     return true;
@@ -56,7 +56,7 @@ function logDir() {
 }
 
 function logPath() {
-  return path.join(logDir(), 'couchtube.log');
+  return path.join(logDir(), 'cathode.log');
 }
 
 function rotateIfNeeded() {
@@ -90,9 +90,9 @@ function localStamp() {
 }
 
 // Debug gate. DEBUG-level lines are dropped unless debug mode is on (toggled in
-// Settings > About, or the COUCHTUBE_DEBUG env var). Kept cheap so debug() calls
+// Settings > About, or the CATHODE_DEBUG env var). Kept cheap so debug() calls
 // scattered in hot paths cost nothing when off.
-let debugEnabled = process.env.COUCHTUBE_DEBUG === '1';
+let debugEnabled = process.env.CATHODE_DEBUG === '1';
 function setDebug(on) { debugEnabled = !!on; }
 function isDebug() { return debugEnabled; }
 

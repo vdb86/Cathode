@@ -528,5 +528,5 @@
     }
   }
 
-  window.CouchTubeSabr = { start, stop, active: function () { return !!currentAdapter; } };
+  window.CathodeSabr = { start, stop, active: function () { return !!currentAdapter; } };
 })();

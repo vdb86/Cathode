@@ -1,7 +1,7 @@
 {
-  "name": "couchtube",
+  "name": "cathode",
   "version": "1.0.2",
-  "description": "CouchTube",
+  "description": "Cathode",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
@@ -26,8 +26,8 @@
     "esbuild": "^0.28.1"
   },
   "build": {
-    "appId": "com.couchtube.app",
-    "productName": "CouchTube",
+    "appId": "com.cathode.app",
+    "productName": "Cathode",
     "artifactName": "${productName}-${version}-win-x64.${ext}",
     "npmRebuild": false,
     "directories": {

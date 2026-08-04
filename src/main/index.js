@@ -115,9 +115,9 @@ function createTray() {
   if (tray) return;
   try {
     tray = new Tray(trayIcon());
-    tray.setToolTip('CouchTube');
+    tray.setToolTip('Cathode');
     tray.setContextMenu(Menu.buildFromTemplate([
-      { label: 'Show CouchTube', click: () => showWindow() },
+      { label: 'Show Cathode', click: () => showWindow() },
       { type: 'separator' },
       { label: 'Quit', click: () => { isQuitting = true; app.quit(); } }
     ]));
@@ -254,7 +254,7 @@ app.whenReady().then(async () => {
   try { update.finalizeBoot(); } catch (e) { logger.error('update.finalizeBoot threw:', e && e.message); }
   // Windows taskbar identity: match the packaged appId so the taskbar button
   // groups correctly and uses our icon (not the generic Electron one) in dev too.
-  try { app.setAppUserModelId('com.couchtube.app'); } catch { /* non-Windows */ }
+  try { app.setAppUserModelId('com.cathode.app'); } catch { /* non-Windows */ }
   // Debug mode (Settings > About): restore the saved flag and apply it to the
   // logger + innertube dumps before anything else runs, so a debug session
   // captures the whole boot. A PII-free account summary feeds the snapshot.
@@ -296,9 +296,9 @@ app.whenReady().then(async () => {
   downloads.getState().catch(() => {});
 
   // Stale diagnostic dumps (s83): debug_*.json are raw personalized feed/player
-  // captures, only wanted while COUCHTUBE_DEBUG_DUMPS=1. Prune them on a normal
+  // captures, only wanted while CATHODE_DEBUG_DUMPS=1. Prune them on a normal
   // boot so they don't linger in Data/ or get swept into backups.
-  if (process.env.COUCHTUBE_DEBUG_DUMPS !== '1') {
+  if (process.env.CATHODE_DEBUG_DUMPS !== '1') {
     try {
       const fsP = require('fs');
       const dd = app.getPath('userData');
@@ -467,7 +467,7 @@ app.whenReady().then(async () => {
   // GitHub repo to check for releases. app:checkUpdate hits the Releases API,
   // compares tag_name to app.getVersion(), and reports { newer, latest, url }.
   // A blank repo would make it report { configured:false }.
-  const UPDATE_REPO = 'vdb86/CouchTube';
+  const UPDATE_REPO = 'vdb86/Cathode';
   const cmpVer = (a, b) => {
     const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
     const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
@@ -487,7 +487,7 @@ app.whenReady().then(async () => {
     if (!UPDATE_REPO) return { configured: false };
     try {
       const res = await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, {
-        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'CouchTube' }
+        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Cathode' }
       });
       if (!res.ok) return { configured: true, ok: false, status: res.status };
       const j = await res.json();
@@ -745,9 +745,9 @@ function pushCompanionClients() {
 function startCompanionIfEnabled(force) {
   if (!force && !system.get().companionEnabled) return;
   companion.start({
-    // Empty companionName -> default to "CouchTube" (a blank mDNS name left the
+    // Empty companionName -> default to "Cathode" (a blank mDNS name left the
     // phone unable to discover the TV; the name must be non-empty).
-    tvName: system.get().companionName || 'CouchTube',
+    tvName: system.get().companionName || 'Cathode',
     port: system.get().companionPort || undefined,
     onCommand: (t, msg, ctx) => {
       // Profiles query: answered entirely in main (the account list lives here),

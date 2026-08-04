@@ -4,7 +4,7 @@
 //
 // Two tiers:
 //   Always on  - uncaught errors, unhandled promise rejections, and console.error
-//                / console.warn are forwarded to couchtube.log. These are rare and
+//                / console.warn are forwarded to cathode.log. These are rare and
 //                are exactly what a crash report needs.
 //   Debug only - console.log / console.info are ALSO mirrored to the log, so a
 //                debug session captures the full renderer chatter. Toggled live by

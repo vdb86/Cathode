@@ -105,7 +105,7 @@ import {
     const isNetwork = /fetch failed|failed to fetch|ENOTFOUND|getaddrinfo|EAI_AGAIN|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ENETUNREACH|ENETDOWN|net::ERR|NetworkError/i.test(msg);
     if (isNetwork) {
       $('error-title').textContent = 'No connection to YouTube';
-      $('error-message').textContent = "CouchTube can't reach YouTube right now. Check that this PC is connected to the internet, then try again.";
+      $('error-message').textContent = "Cathode can't reach YouTube right now. Check that this PC is connected to the internet, then try again.";
     } else {
       $('error-title').textContent = 'Something broke';
       $('error-message').textContent = msg;
@@ -116,7 +116,7 @@ import {
   }
 
   // True from the start of a play() until the new stream has loaded. During this
-  // window we tear down the previous SABR session (CouchTubeSabr.stop unregisters
+  // window we tear down the previous SABR session (CathodeSabr.stop unregisters
   // its Shaka schemes), so in-flight segment requests from the OLD video can fail
   // with a transient NETWORK error (e.g. 1000 UNSUPPORTED_SCHEME host=audio when
   // skipping via Next). Those are teardown noise -- the new video then plays
@@ -212,7 +212,7 @@ import {
     pstate.shakaPlayer.getNetworkingEngine().registerRequestFilter((type, request) => {
       // While a SABR session is active its adapter owns googlevideo requests
       // (POST/UMP); this classic pot/range filter must stay out of the way.
-      if (window.CouchTubeSabr && window.CouchTubeSabr.active && window.CouchTubeSabr.active()) return;
+      if (window.CathodeSabr && window.CathodeSabr.active && window.CathodeSabr.active()) return;
       let u = request.uris && request.uris[0];
       if (!u || u.indexOf('googlevideo.com/') === -1) return;
       // (1) Live PoToken: append the GVS pot to segment/manifest requests that
@@ -317,7 +317,7 @@ import {
   // sabr.js, then load the SABR DASH manifest it returns.
   async function playSabr(s, startAt) {
     const p = await ensureShaka();
-    const uri = window.CouchTubeSabr.start(p, s);
+    const uri = window.CathodeSabr.start(p, s);
     await p.load(uri, (startAt > 0 ? startAt : null), 'application/dash+xml');
   }
 
@@ -426,7 +426,7 @@ import {
     switching = true; // suppress teardown-race Shaka errors until the new stream loads
     if (!opts.audioSwitch) runPreCommand(firstPlay, videoId);
     if (!opts.audioSwitch) resetSponsorBlock(); // same video: keep segments + already-skipped state
-    if (window.CouchTubeSabr) window.CouchTubeSabr.stop(); // dispose any prior SABR session
+    if (window.CathodeSabr) window.CathodeSabr.stop(); // dispose any prior SABR session
     try {
       // SABR (VOD) first when the vendor bundle is present; otherwise fall back
       // to the classic stream payload. getSabr returns { ok:false } for live /
@@ -447,7 +447,7 @@ import {
       // the collapse to that exact format.
       const forceCollapse = !!opts.audioVariant;
       const multiAudio = !forceCollapse;
-      if (window.GoogleVideo && window.CouchTubeSabr) {
+      if (window.GoogleVideo && window.CathodeSabr) {
         try {
           const sr = await window.tv.sabr(videoId, wantLang, { multiAudio, preferredVariant: opts.audioVariant || '' });
           if (sr && sr.ok) { s = sr; useSabr = true; }
@@ -541,7 +541,7 @@ import {
                  (se && se.message ? ' msg=' + se.message : '');
           } catch (_e) { sd = String(err); }
           window.tv.logError('SABR playback failed: ' + sd);
-          if (window.CouchTubeSabr) window.CouchTubeSabr.stop();
+          if (window.CathodeSabr) window.CathodeSabr.stop();
           // The SABR adapter reconfigures THIS Shaka player's networking engine
           // (custom scheme + request/response filters) and its MediaSource. A
           // failed SABR load can leave that residue behind, which then makes the
@@ -568,7 +568,7 @@ import {
               }
             } catch (e4) {
               window.tv.logError('SABR collapsed (A) retry failed: ' + (e4 && e4.message));
-              if (window.CouchTubeSabr) window.CouchTubeSabr.stop();
+              if (window.CathodeSabr) window.CathodeSabr.stop();
               if (pstate.shakaPlayer) { try { await pstate.shakaPlayer.destroy(); } catch (_e) {} pstate.shakaPlayer = null; }
             }
           }
@@ -594,7 +594,7 @@ import {
           // A rejected classic-DASH load was only visible in the devtools console
           // before -- the device log jumped from "TV DASH codecs" straight to the
           // media-element error the PROGRESSIVE fallback then threw, hiding the
-          // real failure. Log the full Shaka error to couchtube.log.
+          // real failure. Log the full Shaka error to cathode.log.
           const se = (err && err.detail) ? err.detail : err;
           let sd;
           try {
@@ -645,7 +645,7 @@ import {
     // reasonless teardown used by account switching.
     if (reason === 'end') runPostCommand('end');
     else if (reason === 'manual') runPostCommand('stop');
-    if (window.CouchTubeSabr) window.CouchTubeSabr.stop();
+    if (window.CathodeSabr) window.CathodeSabr.stop();
     if (pstate.shakaPlayer) pstate.shakaPlayer.unload().catch(() => {});
     resetSponsorBlock();
     hideStats();
@@ -1247,7 +1247,7 @@ import {
       setTimeout(async () => {
         try {
           const r = await window.tv.checkUpdate();
-          if (r && r.ok && r.newer) toast('CouchTube v' + r.latest + ' is available - see Settings > About to update', 6000);
+          if (r && r.ok && r.newer) toast('Cathode v' + r.latest + ' is available - see Settings > About to update', 6000);
         } catch (e) { /* offline or rate-limited: ignore */ }
       }, 8000);
     }
@@ -1258,7 +1258,7 @@ import {
       setTimeout(async () => {
         try {
           const us = await window.tv.updateStatus();
-          if (us && us.justUpdated) toast('Updated to CouchTube v' + us.justUpdated, 5000);
+          if (us && us.justUpdated) toast('Updated to Cathode v' + us.justUpdated, 5000);
         } catch (e) { /* ignore */ }
       }, 3000);
     }
