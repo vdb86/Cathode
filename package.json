@@ -1,6 +1,6 @@
 {
   "name": "cathode",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Cathode",
   "main": "src/main/index.js",
   "scripts": {

@@ -98,6 +98,36 @@ function setOskMode(m) {
   if (m !== 'search') { suggestItems = []; $('search-suggest').innerHTML = ''; $('search-suggest').classList.add('hidden'); }
 }
 
+// Render the per-field reference (variables + examples) shown below the
+// keyboard. Variable definitions ("{name} - description") are laid out in TWO
+// columns so the block stays short on small laptop screens; headings and
+// example command lines span the full width. Parses the plain-text reference
+// string so callers keep passing a simple string.
+function renderExamples(host, text) {
+  host.innerHTML = '';
+  let grid = null;
+  for (const raw of String(text).split('\n')) {
+    const line = raw.trim();
+    if (!line) { grid = null; continue; } // blank line ends a variable group
+    const m = line.match(/^(\{[^}]+\})\s*-\s*(.+)$/);
+    if (m) {
+      if (!grid) { grid = document.createElement('div'); grid.className = 'osk-var-grid'; host.appendChild(grid); }
+      const cell = document.createElement('div');
+      cell.className = 'osk-var';
+      const code = document.createElement('code'); code.textContent = m[1];
+      const desc = document.createElement('span'); desc.textContent = ' ' + m[2];
+      cell.appendChild(code); cell.appendChild(desc);
+      grid.appendChild(cell);
+      continue;
+    }
+    grid = null;
+    const div = document.createElement('div');
+    div.className = /:$/.test(line) ? 'osk-ex-head' : 'osk-ex-line';
+    div.textContent = line;
+    host.appendChild(div);
+  }
+}
+
 // Generic OSK text entry (Settings command rows). Reuses the search overlay;
 // hides the settings dialog underneath (same z-index) while typing and
 // restores it on commit/cancel. Works with a physical keyboard too.
@@ -112,8 +142,8 @@ export function openTextEntry(title, current, cb, examples) {
   $('search-input').placeholder = title || 'Enter text';
   const ex = $('osk-examples');
   if (ex) {
-    if (examples) { ex.textContent = 'Examples:  ' + examples; ex.classList.remove('hidden'); }
-    else { ex.textContent = ''; ex.classList.add('hidden'); }
+    if (examples) { renderExamples(ex, examples); ex.classList.remove('hidden'); }
+    else { ex.innerHTML = ''; ex.classList.add('hidden'); }
   }
   $('search-input').value = current || '';
   oskZone = 'osk'; oskRow = 0; oskCol = 0;   // land on the Save key
@@ -126,7 +156,7 @@ export function openTextEntry(title, current, cb, examples) {
 function finishTextEntry(val) {
   hide('search-overlay');
   setOskMode('search');
-  const ex = $('osk-examples'); if (ex) { ex.textContent = ''; ex.classList.add('hidden'); }
+  const ex = $('osk-examples'); if (ex) { ex.innerHTML = ''; ex.classList.add('hidden'); }
   $('search-input').value = '';
   show('settings-overlay');
   state.mode = 'settings';
