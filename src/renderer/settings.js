@@ -1299,7 +1299,11 @@ const Settings = (function () {
     } else if (hooks.toast) {
       hooks.toast('You are up to date (v' + (r.current || ver) + ')');
     }
-    if (dialogCat === 'about') rebuildDialog();
+    if (dialogCat === 'about') {
+      rebuildDialog();
+      // Update found: land the cursor on the download (or release-page) button.
+      if (r.newer) focusRowByLabel(updateCanSelf ? 'Download update' : 'Get the update');
+    }
   }
   // Download + stage the update in the background, showing live progress on the
   // "Downloading update" row. On success the row set switches to "Restart now",
@@ -1314,7 +1318,7 @@ const Settings = (function () {
     updateBusy = false;
     if (r && r.ok) {
       updateStaged = { version: r.version };
-      if (dialogCat === 'about') rebuildDialog();
+      if (dialogCat === 'about') { rebuildDialog(); focusRowByLabel('Restart now'); }
       if (hooks.toast) hooks.toast('Update downloaded. Restart now, or it installs when you next close Cathode.', 6000);
     } else {
       if (dialogCat === 'about') rebuildDialog();
@@ -1884,6 +1888,17 @@ const Settings = (function () {
   // are skipped by up/down: they have no action, so they should never be a
   // focus stop / look like a selectable button.
   function focusable(i) { return rows[i] && rows[i].kind !== 'note' && rows[i].kind !== 'info'; }
+  // Move dialog focus to the first focusable row whose label STARTS WITH `prefix`
+  // (labels carry version suffixes, e.g. "Download update (v1.2.3)"). Call AFTER
+  // rebuildDialog() so `rows` is current. Returns false (no-op) if not found.
+  function focusRowByLabel(prefix) {
+    for (let i = 0; i < rows.length; i++) {
+      if (focusable(i) && rows[i].label && rows[i].label.indexOf(prefix) === 0) {
+        rowIdx = i; applyFocus(); return true;
+      }
+    }
+    return false;
+  }
   // Move the cursor by dir, skipping non-focusable (note) rows; stay put at an
   // edge if nothing focusable lies beyond.
   function stepRow(from, dir) {
